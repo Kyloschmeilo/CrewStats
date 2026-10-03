@@ -58,9 +58,13 @@ internal static class Updater
             var json = await Http.GetStringAsync($"https://api.github.com/repos/{GitHubRepo}/releases/latest");
             using var release = JsonDocument.Parse(json);
             var tag = release.RootElement.GetProperty("tag_name").GetString() ?? "";
-            if (!Version.TryParse(tag.TrimStart('v', 'V'), out var latest)
-                || !Version.TryParse(CrewStatsPlugin.Version, out var current))
+            var latest = ParseVersion(tag);
+            var current = ParseVersion(CrewStatsPlugin.Version);
+            if (latest == null || current == null)
+            {
+                CrewStatsPlugin.Logger.LogWarning($"Update-Prüfung: Version nicht lesbar ({tag} / {CrewStatsPlugin.Version}).");
                 return;
+            }
             if (latest <= current)
             {
                 CrewStatsPlugin.Logger.LogInfo($"CrewStats ist aktuell ({current}).");
@@ -90,6 +94,13 @@ internal static class Updater
         {
             CrewStatsPlugin.Logger.LogWarning($"Update-Prüfung fehlgeschlagen: {exc.Message}");
         }
+    }
+
+    /// <summary>"v1.2.0", "1.2.0" oder "1.2.0+abc123" (Build-Metadaten) → 1.2.0</summary>
+    private static Version? ParseVersion(string text)
+    {
+        var core = text.Trim().TrimStart('v', 'V').Split('+', '-')[0];
+        return Version.TryParse(core, out var version) ? version : null;
     }
 
     private static void Install(byte[] bytes)
