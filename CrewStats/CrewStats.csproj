@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <AssemblyName>CrewStats</AssemblyName>
+        <RootNamespace>CrewStats</RootNamespace>
+        <Version>1.1.0</Version>
+        <DebugType>embedded</DebugType>
+        <CheckEolTargetFramework>false</CheckEolTargetFramework>
+
+        <!-- Among-Us-Ordner: die fertige Mod wird nach dem Build automatisch nach BepInEx/plugins kopiert -->
+        <AmongUs Condition="'$(AmongUs)' == ''">D:\SteamLibrary\steamapps\common\Among Us</AmongUs>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Spielversion 2026.9.29 (Steam, ab hier 64-Bit) – bei einem Among-Us-Update hier die Version anheben -->
+        <PackageReference Include="AmongUs.GameLibs.Steam" Version="2026.9.29" PrivateAssets="all" />
+        <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.735" Private="false" ExcludeAssets="runtime;native" />
+        <PackageReference Include="BepInEx.AutoPlugin" Version="1.1.0" PrivateAssets="all" />
+        <PackageReference Include="BepInEx.IL2CPP.MSBuild" Version="2.1.0-rc.1" PrivateAssets="all" ExcludeAssets="runtime" />
+    </ItemGroup>
+
+    <Target Name="CopyToAmongUs" AfterTargets="Build" Condition="Exists('$(AmongUs)/BepInEx/plugins')">
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(AmongUs)/BepInEx/plugins/" />
+        <Message Importance="high" Text="✅ CrewStats.dll nach $(AmongUs)/BepInEx/plugins kopiert" />
+    </Target>
+
+</Project>
