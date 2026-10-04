@@ -38,12 +38,11 @@ internal static class MenuToggles
         if (template == null) return;
 
         var parent = template.transform.parent;
-        var vanilla = originals
+        // Neue Schalter starten im Container des Vorlagen-Schalters, FitRows ordnet sie danach ein
+        var positions = originals
             .Where(t => t.transform.parent == parent && t.gameObject.activeSelf)
-            .Select(t => t.transform)
+            .Select(t => t.transform.localPosition)
             .ToList();
-        var positions = vanilla.Select(t => t.localPosition).ToList();
-        var vanillaRows = RowsOf(positions);
 
         var created = new List<Transform>();
         foreach (var toggle in Toggles)
@@ -53,27 +52,43 @@ internal static class MenuToggles
             positions.Add(position);
             if (CreateOne(template, parent, position, toggle) is { } button) created.Add(button);
         }
-        if (created.Count > 0) FitRows(vanilla.Concat(created).ToList(), vanillaRows);
+
+        // Das Raster unten im Menü: jede Reihe ist im Spiel ein eigener Container – deshalb
+        // in Weltkoordinaten über alle Schalter hinweg rechnen. „Mouse Movement“ gehört nicht dazu.
+        var grid = new[] { menu.CensorChatButton, menu.EnableFriendInvitesButton, menu.ColorBlindButton, menu.StreamerModeButton }
+            .Where(t => t != null && t.gameObject.activeSelf)
+            .Select(t => t.transform)
+            .ToList();
+        if (created.Count > 0) FitRows(grid, created);
     }
 
-    // Maße des Spiel-Rasters (aus einem Screenshot gemessen, relativ zum Reihenabstand):
-    private const float ButtonHeight = 0.77f; // Höhe eines Schalters
+    // Maße des Spiel-Rasters (aus Screenshots gemessen, relativ zum Reihenabstand):
+    private const float ButtonHeight = 0.72f; // Höhe eines Schalters
     private const float AvailableHeight = 1.84f; // Platz von der Oberkante Reihe 1 bis kurz über „Leave Game“
     private const float GapFactor = 0.92f; // Schalterhöhe im Verhältnis zum neuen Reihenabstand
 
     /// <summary>
-    /// Kommt durch unsere Schalter eine weitere Reihe dazu, ist darunter kein Platz (dort liegt im
-    /// Spiel „Leave Game“). Dann wird das ganze Raster gleichmäßig enger und kleiner gemacht, sodass
-    /// alle Reihen in den Platz der ursprünglichen passen.
+    /// Unter dem Raster liegt im Spiel „Leave Game“ – für eine weitere Reihe ist dort kein Platz.
+    /// Deshalb wird das ganze Raster gleichmäßig enger und kleiner gemacht, sodass alle Reihen in den
+    /// Platz der ursprünglichen passen. Gerechnet wird in Weltkoordinaten (Reihen = eigene Container).
     /// </summary>
-    private static void FitRows(List<Transform> buttons, List<float> vanillaRows)
+    private static void FitRows(List<Transform> vanilla, List<Transform> created)
     {
-        var rows = RowsOf(buttons.Select(b => b.localPosition).ToList());
-        CrewStatsPlugin.Logger.LogInfo(
-            $"Menü-Raster: {buttons.Count} Schalter, Reihen vorher [{string.Join("; ", vanillaRows)}], jetzt [{string.Join("; ", rows)}]");
-        if (vanillaRows.Count < 2 || rows.Count <= vanillaRows.Count) return;
-
+        var vanillaRows = RowsOf(vanilla.Select(t => t.position).ToList());
+        if (vanillaRows.Count < 2)
+        {
+            CrewStatsPlugin.Logger.LogWarning($"Menü-Raster: nur {vanillaRows.Count} Spiel-Reihe(n) gefunden – Schalter bleiben unverändert.");
+            return;
+        }
         var step = vanillaRows[0] - vanillaRows[1]; // ursprünglicher Reihenabstand
+
+        // Neue Schalter als eigene Reihe direkt unter dem Spiel-Raster einordnen
+        var newRowY = vanillaRows[^1] - step;
+        foreach (var button in created)
+            button.position = new Vector3(button.position.x, newRowY, button.position.z);
+
+        var buttons = vanilla.Concat(created).ToList();
+        var rows = RowsOf(buttons.Select(b => b.position).ToList());
         var newStep = AvailableHeight * step / (rows.Count - 1 + GapFactor);
         var newHeight = GapFactor * newStep;
         var scale = newHeight / (ButtonHeight * step);
@@ -81,12 +96,13 @@ internal static class MenuToggles
 
         foreach (var button in buttons)
         {
-            var row = rows.IndexOf(Round(button.localPosition.y));
-            var position = button.localPosition;
-            button.localPosition = new Vector3(position.x, top - newHeight / 2 - row * newStep, position.z);
+            var row = rows.IndexOf(Round(button.position.y));
+            var position = button.position;
+            button.position = new Vector3(position.x, top - newHeight / 2 - row * newStep, position.z);
             button.localScale *= scale;
         }
-        CrewStatsPlugin.Logger.LogInfo($"Menü-Schalter auf {rows.Count} Reihen verteilt (Größe {scale:P0}).");
+        CrewStatsPlugin.Logger.LogInfo(
+            $"Menü-Raster: Reihen [{string.Join("; ", vanillaRows)}] + 1 → {rows.Count} Reihen, Größe {scale:P0}.");
     }
 
     private static float Round(float value) => (float)Math.Round(value, 2);
