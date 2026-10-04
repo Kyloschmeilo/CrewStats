@@ -24,6 +24,7 @@ public partial class CrewStatsPlugin : BasePlugin
     internal static ConfigEntry<bool> AutoMuteEnabled { get; private set; } = null!;
     internal static ConfigEntry<bool> AutoUpdate { get; private set; } = null!;
     internal static ConfigEntry<bool> AnnounceLobby { get; private set; } = null!;
+    internal static ConfigEntry<bool> NoSkipOnEmergency { get; private set; } = null!;
     internal static string DataDirectory { get; private set; } = null!;
 
     public Harmony Harmony { get; } = new(Id);
@@ -48,6 +49,12 @@ public partial class CrewStatsPlugin : BasePlugin
             false,
             "Discord-Auto-Mute: Aufgaben = alle stumm, Meeting = Lebende reden, Spielende = alle entmutet. " +
             "Wird im Spiel im Einstellungsmenü (ESC) an- und ausgeschaltet.");
+        NoSkipOnEmergency = Config.Bind(
+            "Regeln",
+            "NoSkipOnEmergency",
+            false,
+            "Hausregel als Host: Bei Meetings über den Notfall-Knopf werden Skip-Stimmen abgelehnt, " +
+            "die Spieler müssen jemanden wählen. Schalter im Spiel: ESC -> Allgemein -> \"Kein Skip bei Notfall\".");
         AnnounceLobby = Config.Bind(
             "Lobby",
             "Announce",

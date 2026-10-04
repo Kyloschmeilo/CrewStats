@@ -10,6 +10,8 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam**, die mit unserem Discord-B
 - 🎮 **Lobby-Ankündigung** – als Host erscheint deine Lobby automatisch im Discord (Code, Map,
   Spielerzahl live), während der Runde ist das Wettbüro gesperrt. Abschalten: `Announce = false`
   im Abschnitt `[Lobby]` der Config.
+- 🚫 **Kein Skip bei Notfall** (Hausregel, nur als Host) – bei Meetings über den Notfall-Knopf
+  wird „Überspringen“ abgelehnt, man muss jemanden wählen. An/aus unter **ESC → Allgemein**.
 - 🏅 Aus den Runden berechnet der Bot außerdem **Highlights**, **Erfolge** (`/erfolge`),
   **Rivalen** (`/stats`) und einen **Spieleabend-Recap** (`/recap`).
 

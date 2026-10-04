@@ -1,11 +1,13 @@
 using System;
 using HarmonyLib;
+using InnerNet;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 
 namespace CrewStats;
 
 // Alle Patches lesen nur mit (Postfix/Prefix ohne Rückgabewert) und verändern das Spiel nicht –
-// einzige Ausnahme ist der zusätzliche Auto-Mute-Schalter im Einstellungsmenü.
+// Ausnahmen: die zusätzlichen Schalter im Einstellungsmenü und die optionale Hausregel
+// „Kein Skip bei Notfall“ (CastVote-Prefix, nur als Host und nur wenn eingeschaltet).
 // Jeder Patch fängt eigene Fehler ab, damit die Mod das Spiel niemals stören kann.
 
 [HarmonyPatch(typeof(IntroCutscene), nameof(IntroCutscene.CoBegin))]
@@ -32,7 +34,36 @@ internal static class MurderPlayerPatch
 internal static class StartMeetingPatch
 {
     public static void Postfix(PlayerControl __instance, NetworkedPlayerInfo target)
-        => Safe.Run(() => GameRecorder.OnMeetingStarted(__instance, target));
+    {
+        Safe.Run(() => NoSkipRule.OnMeetingStarted(target));
+        Safe.Run(() => GameRecorder.OnMeetingStarted(__instance, target));
+    }
+}
+
+// ---------- Hausregel „Kein Skip bei Notfall“ ----------
+
+[HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.Start))]
+internal static class MeetingHudStartPatch
+{
+    public static void Postfix() => Safe.Run(NoSkipRule.OnMeetingHudShown);
+}
+
+[HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.CastVote))]
+internal static class CastVotePatch
+{
+    // false = Original überspringen (Stimme zählt nicht). Bei einem Fehler zählt die Stimme normal.
+    public static bool Prefix(MeetingHud __instance, PlayerId srcPlayerId, PlayerId suspectPlayerId)
+    {
+        try
+        {
+            return NoSkipRule.AllowVote(__instance, srcPlayerId, suspectPlayerId);
+        }
+        catch (Exception exc)
+        {
+            CrewStatsPlugin.Logger.LogError($"Kein-Skip-Regel-Fehler (Stimme zählt normal): {exc}");
+            return true;
+        }
+    }
 }
 
 [HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.VotingComplete))]
@@ -79,7 +110,7 @@ internal static class HudUpdatePatch
 [HarmonyPatch(typeof(OptionsMenuBehaviour), nameof(OptionsMenuBehaviour.Start))]
 internal static class OptionsMenuPatch
 {
-    public static void Postfix(OptionsMenuBehaviour __instance) => Safe.Run(() => AutoMuteToggle.Create(__instance));
+    public static void Postfix(OptionsMenuBehaviour __instance) => Safe.Run(() => MenuToggles.Create(__instance));
 }
 
 // ---------- Auto-Update ----------

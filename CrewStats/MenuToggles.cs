@@ -9,34 +9,54 @@ using Object = UnityEngine.Object;
 namespace CrewStats;
 
 /// <summary>
-/// Schalter „Auto-Mute“ im Einstellungsmenü (ESC bzw. Zahnrad), Reiter „Allgemein“.
-/// Ein Klon eines vorhandenen Spiel-Schalters, damit er genauso aussieht, und wird
-/// im Raster der anderen Schalter auf den nächsten freien Platz gesetzt.
+/// Eigene Schalter im Einstellungsmenü (ESC bzw. Zahnrad), Reiter „Allgemein“: Auto-Mute und
+/// „Kein Skip bei Notfall“. Jeder ist ein Klon eines vorhandenen Spiel-Schalters, damit er genauso
+/// aussieht, und kommt im Raster der anderen Schalter auf den nächsten freien Platz.
 /// </summary>
-internal static class AutoMuteToggle
+internal static class MenuToggles
 {
-    private const string ObjectName = "CrewStatsAutoMute";
+    private sealed record Toggle(string ObjectName, string Label, Func<bool> Get, Action<bool> Set);
+
+    private static readonly Toggle[] Toggles =
+    {
+        new("CrewStatsAutoMute", "Auto-Mute", () => AutoMute.Enabled, on => AutoMute.Enabled = on),
+        new("CrewStatsNoSkip", "Kein Skip bei Notfall", () => NoSkipRule.Enabled, on => NoSkipRule.Enabled = on),
+    };
+
     private static readonly Color OnColor = new(0f, 1f, 0.16f, 1f);
 
     public static void Create(OptionsMenuBehaviour menu)
     {
-        var toggles = new[]
+        var originals = new[]
             {
                 menu.CensorChatButton, menu.EnableFriendInvitesButton, menu.ColorBlindButton,
                 menu.StreamerModeButton, menu.DisableMouseMovement,
             }
             .Where(t => t != null)
             .ToList();
-        var template = toggles.FirstOrDefault(t => t == menu.StreamerModeButton) ?? toggles.FirstOrDefault();
+        var template = originals.FirstOrDefault(t => t == menu.StreamerModeButton) ?? originals.FirstOrDefault();
         if (template == null) return;
 
         var parent = template.transform.parent;
-        if (parent.Find(ObjectName) != null) return;
+        var positions = originals
+            .Where(t => t.transform.parent == parent && t.gameObject.activeSelf)
+            .Select(t => t.transform.localPosition)
+            .ToList();
 
-        var siblings = toggles.Where(t => t.transform.parent == parent && t.gameObject.activeSelf).ToList();
+        foreach (var toggle in Toggles)
+        {
+            if (parent.Find(toggle.ObjectName) != null) continue;
+            var position = NextFreeSlot(positions);
+            positions.Add(position);
+            CreateOne(template, parent, position, toggle);
+        }
+    }
+
+    private static void CreateOne(ToggleButtonBehaviour template, Transform parent, Vector3 position, Toggle toggle)
+    {
         var clone = Object.Instantiate(template, parent);
-        clone.name = ObjectName;
-        clone.transform.localPosition = NextFreeSlot(siblings.Select(t => t.transform.localPosition).ToList());
+        clone.name = toggle.ObjectName;
+        clone.transform.localPosition = position;
 
         var text = clone.Text;
         var background = clone.Background;
@@ -51,25 +71,25 @@ internal static class AutoMuteToggle
 
         if (button == null)
         {
-            CrewStatsPlugin.Logger.LogWarning("Auto-Mute-Schalter: kein Button gefunden.");
+            CrewStatsPlugin.Logger.LogWarning($"Schalter {toggle.Label}: kein Button gefunden.");
             return;
         }
         button.OnClick = new Button.ButtonClickedEvent();
         button.OnClick.AddListener((Action)(() =>
         {
-            AutoMute.Enabled = !AutoMute.Enabled;
-            Refresh(text, background, rollover);
+            toggle.Set(!toggle.Get()); // BepInEx speichert die Config sofort
+            Refresh(toggle, text, background, rollover);
         }));
-        Refresh(text, background, rollover);
+        Refresh(toggle, text, background, rollover);
 
-        CrewStatsPlugin.Logger.LogInfo($"Auto-Mute-Schalter im Menü bei {button.transform.localPosition}");
+        CrewStatsPlugin.Logger.LogInfo($"Schalter \"{toggle.Label}\" im Menü bei {position}");
     }
 
-    private static void Refresh(TextMeshPro text, SpriteRenderer background, ButtonRolloverHandler? rollover)
+    private static void Refresh(Toggle toggle, TextMeshPro text, SpriteRenderer background, ButtonRolloverHandler? rollover)
     {
-        var on = AutoMute.Enabled;
+        var on = toggle.Get();
         var color = on ? OnColor : Color.white;
-        text.text = $"Auto-Mute: {(on ? "An" : "Aus")}";
+        text.text = $"{toggle.Label}: {(on ? "An" : "Aus")}";
         background.color = color;
         if (rollover != null) rollover.ChangeOutColor(color);
     }
