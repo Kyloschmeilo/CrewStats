@@ -39,10 +39,17 @@ if (git -C $root status --porcelain) {
 }
 Invoke-Native { git -C $root push } 'git push fehlgeschlagen.'
 
-Invoke-Native {
-    gh release create $tag `
-        "$root\CrewStats\bin\Release\net6.0\CrewStats.dll" `
-        "$root\installer\CrewStats-Installer.bat" `
-        --title "CrewStats $version" --notes $Notes
-} 'Release konnte nicht erstellt werden.'
+# Notizen über eine Datei: Windows PowerShell 5 zerlegt Anführungszeichen in Argumenten
+$notesFile = Join-Path $env:TEMP "crewstats-release-notes.md"
+[IO.File]::WriteAllText($notesFile, $Notes, (New-Object Text.UTF8Encoding $false))
+try {
+    Invoke-Native {
+        gh release create $tag `
+            "$root\CrewStats\bin\Release\net6.0\CrewStats.dll" `
+            "$root\installer\CrewStats-Installer.bat" `
+            --title "CrewStats $version" --notes-file $notesFile
+    } 'Release konnte nicht erstellt werden.'
+} finally {
+    Remove-Item $notesFile -ErrorAction SilentlyContinue
+}
 Write-Host "CrewStats $version veröffentlicht." -ForegroundColor Green
