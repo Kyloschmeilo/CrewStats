@@ -38,22 +38,22 @@ internal static class MenuToggles
         if (template == null) return;
 
         var parent = template.transform.parent;
-        var positions = originals
+        var vanilla = originals
             .Where(t => t.transform.parent == parent && t.gameObject.activeSelf)
-            .Select(t => t.transform.localPosition)
+            .Select(t => t.transform)
             .ToList();
-
+        var positions = vanilla.Select(t => t.localPosition).ToList();
         var vanillaRows = RowsOf(positions);
-        var added = false;
+
+        var created = new List<Transform>();
         foreach (var toggle in Toggles)
         {
             if (parent.Find(toggle.ObjectName) != null) continue;
             var position = NextFreeSlot(positions);
             positions.Add(position);
-            CreateOne(template, parent, position, toggle);
-            added = true;
+            if (CreateOne(template, parent, position, toggle) is { } button) created.Add(button);
         }
-        if (added) FitRows(parent, originals, vanillaRows);
+        if (created.Count > 0) FitRows(vanilla.Concat(created).ToList(), vanillaRows);
     }
 
     // Maße des Spiel-Rasters (aus einem Screenshot gemessen, relativ zum Reihenabstand):
@@ -66,14 +66,11 @@ internal static class MenuToggles
     /// Spiel „Leave Game“). Dann wird das ganze Raster gleichmäßig enger und kleiner gemacht, sodass
     /// alle Reihen in den Platz der ursprünglichen passen.
     /// </summary>
-    private static void FitRows(Transform parent, List<ToggleButtonBehaviour> originals, List<float> vanillaRows)
+    private static void FitRows(List<Transform> buttons, List<float> vanillaRows)
     {
-        var buttons = originals
-            .Where(t => t.transform.parent == parent && t.gameObject.activeSelf)
-            .Select(t => t.transform)
-            .Concat(Toggles.Select(t => parent.Find(t.ObjectName)).Where(t => t != null))
-            .ToList();
         var rows = RowsOf(buttons.Select(b => b.localPosition).ToList());
+        CrewStatsPlugin.Logger.LogInfo(
+            $"Menü-Raster: {buttons.Count} Schalter, Reihen vorher [{string.Join("; ", vanillaRows)}], jetzt [{string.Join("; ", rows)}]");
         if (vanillaRows.Count < 2 || rows.Count <= vanillaRows.Count) return;
 
         var step = vanillaRows[0] - vanillaRows[1]; // ursprünglicher Reihenabstand
@@ -98,7 +95,7 @@ internal static class MenuToggles
     private static List<float> RowsOf(List<Vector3> positions) =>
         positions.Select(p => Round(p.y)).Distinct().OrderByDescending(y => y).ToList();
 
-    private static void CreateOne(ToggleButtonBehaviour template, Transform parent, Vector3 position, Toggle toggle)
+    private static Transform? CreateOne(ToggleButtonBehaviour template, Transform parent, Vector3 position, Toggle toggle)
     {
         var clone = Object.Instantiate(template, parent);
         clone.name = toggle.ObjectName;
@@ -118,7 +115,7 @@ internal static class MenuToggles
         if (button == null)
         {
             CrewStatsPlugin.Logger.LogWarning($"Schalter {toggle.Label}: kein Button gefunden.");
-            return;
+            return null;
         }
         button.OnClick = new Button.ButtonClickedEvent();
         button.OnClick.AddListener((Action)(() =>
@@ -129,6 +126,7 @@ internal static class MenuToggles
         Refresh(toggle, text, background, rollover);
 
         CrewStatsPlugin.Logger.LogInfo($"Schalter \"{toggle.Label}\" im Menü bei {position}");
+        return gameObject.transform;
     }
 
     private static void Refresh(Toggle toggle, TextMeshPro text, SpriteRenderer background, ButtonRolloverHandler? rollover)
