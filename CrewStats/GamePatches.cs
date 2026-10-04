@@ -59,6 +59,7 @@ internal static class ExitGamePatch
     public static void Prefix()
     {
         Safe.Run(AutoMute.Stop);
+        Safe.Run(LobbyReporter.Close);
         Safe.Run(GameRecorder.OnExitGame); // nur für den Freeplay-Test (Config: Debug.RecordFreeplay)
     }
 }
@@ -68,7 +69,11 @@ internal static class ExitGamePatch
 [HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
 internal static class HudUpdatePatch
 {
-    public static void Postfix() => AutoMute.Tick(); // fängt eigene Fehler ab
+    public static void Postfix()
+    {
+        AutoMute.Tick(); // beide fangen eigene Fehler ab
+        LobbyReporter.Tick();
+    }
 }
 
 [HarmonyPatch(typeof(OptionsMenuBehaviour), nameof(OptionsMenuBehaviour.Start))]

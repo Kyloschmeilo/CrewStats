@@ -1,10 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using AmongUs.GameOptions;
 using InnerNet;
 
@@ -21,11 +17,9 @@ internal static class AutoMute
 {
     private enum Phase { Off, Tasks, Meeting }
 
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(5) };
-    private static readonly SemaphoreSlim SendLock = new(1, 1);
+    private static readonly LatestWebhookSender Sender = new("Auto-Mute");
 
     private static Phase _sent = Phase.Off; // was der Bot zuletzt bekommen hat
-    private static int _sequence; // nur die neueste Phase wird wirklich gesendet
     private static string _sender = ""; // eigener Friendcode, gemerkt für das Spielende
     private static bool _errorLogged;
 
@@ -103,43 +97,7 @@ internal static class AutoMute
             sender = _sender,
             dead,
         });
-        var sequence = Interlocked.Increment(ref _sequence);
         CrewStatsPlugin.Logger.LogInfo($"Auto-Mute: {phase}");
-        Task.Run(() => PostAsync(content, sequence));
-    }
-
-    private static async Task PostAsync(string content, int sequence)
-    {
-        var url = RoundUploader.WebhookUrl;
-        if (url == null)
-        {
-            CrewStatsPlugin.Logger.LogWarning("Auto-Mute: keine gültige Webhook-URL in der Config.");
-            return;
-        }
-
-        await SendLock.WaitAsync();
-        try
-        {
-            if (sequence != Volatile.Read(ref _sequence)) return; // inzwischen gibt es eine neuere Phase
-
-            var body = JsonSerializer.Serialize(new
-            {
-                username = "CrewStats",
-                content,
-                flags = 4096, // keine Benachrichtigung im Channel
-                allowed_mentions = new { parse = Array.Empty<string>() },
-            });
-            using var response = await Http.PostAsync(url, new StringContent(body, Encoding.UTF8, "application/json"));
-            if (!response.IsSuccessStatusCode)
-                CrewStatsPlugin.Logger.LogWarning($"Auto-Mute: Discord hat abgelehnt: {(int)response.StatusCode} {response.ReasonPhrase}");
-        }
-        catch (Exception exc)
-        {
-            CrewStatsPlugin.Logger.LogWarning($"Auto-Mute: Senden fehlgeschlagen: {exc.Message}");
-        }
-        finally
-        {
-            SendLock.Release();
-        }
+        Sender.Send(content);
     }
 }

@@ -7,6 +7,11 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam**, die mit unserem Discord-B
 - 🔇 **Discord-Auto-Mute** – während der Runde sind die Lebenden stumm + taub und die Toten reden,
   im Meeting reden die Lebenden. An/aus im Spiel unter **ESC → Allgemein → Auto-Mute**.
 - ⚙️ **`/rundensettings`** – der Bot zeigt die Lobby-Einstellungen der letzten Runde.
+- 🎮 **Lobby-Ankündigung** – als Host erscheint deine Lobby automatisch im Discord (Code, Map,
+  Spielerzahl live), während der Runde ist das Wettbüro gesperrt. Abschalten: `Announce = false`
+  im Abschnitt `[Lobby]` der Config.
+- 🏅 Aus den Runden berechnet der Bot außerdem **Highlights**, **Erfolge** (`/erfolge`),
+  **Rivalen** (`/stats`) und einen **Spieleabend-Recap** (`/recap`).
 
 Während der Runde zeigt die Mod **nichts** an – sie verschafft keinen Vorteil.
 
