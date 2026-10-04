@@ -43,14 +43,60 @@ internal static class MenuToggles
             .Select(t => t.transform.localPosition)
             .ToList();
 
+        var vanillaRows = RowsOf(positions);
+        var added = false;
         foreach (var toggle in Toggles)
         {
             if (parent.Find(toggle.ObjectName) != null) continue;
             var position = NextFreeSlot(positions);
             positions.Add(position);
             CreateOne(template, parent, position, toggle);
+            added = true;
         }
+        if (added) FitRows(parent, originals, vanillaRows);
     }
+
+    // Maße des Spiel-Rasters (aus einem Screenshot gemessen, relativ zum Reihenabstand):
+    private const float ButtonHeight = 0.77f; // Höhe eines Schalters
+    private const float AvailableHeight = 1.84f; // Platz von der Oberkante Reihe 1 bis kurz über „Leave Game“
+    private const float GapFactor = 0.92f; // Schalterhöhe im Verhältnis zum neuen Reihenabstand
+
+    /// <summary>
+    /// Kommt durch unsere Schalter eine weitere Reihe dazu, ist darunter kein Platz (dort liegt im
+    /// Spiel „Leave Game“). Dann wird das ganze Raster gleichmäßig enger und kleiner gemacht, sodass
+    /// alle Reihen in den Platz der ursprünglichen passen.
+    /// </summary>
+    private static void FitRows(Transform parent, List<ToggleButtonBehaviour> originals, List<float> vanillaRows)
+    {
+        var buttons = originals
+            .Where(t => t.transform.parent == parent && t.gameObject.activeSelf)
+            .Select(t => t.transform)
+            .Concat(Toggles.Select(t => parent.Find(t.ObjectName)).Where(t => t != null))
+            .ToList();
+        var rows = RowsOf(buttons.Select(b => b.localPosition).ToList());
+        if (vanillaRows.Count < 2 || rows.Count <= vanillaRows.Count) return;
+
+        var step = vanillaRows[0] - vanillaRows[1]; // ursprünglicher Reihenabstand
+        var newStep = AvailableHeight * step / (rows.Count - 1 + GapFactor);
+        var newHeight = GapFactor * newStep;
+        var scale = newHeight / (ButtonHeight * step);
+        var top = vanillaRows[0] + ButtonHeight * step / 2; // Oberkante der ersten Reihe bleibt
+
+        foreach (var button in buttons)
+        {
+            var row = rows.IndexOf(Round(button.localPosition.y));
+            var position = button.localPosition;
+            button.localPosition = new Vector3(position.x, top - newHeight / 2 - row * newStep, position.z);
+            button.localScale *= scale;
+        }
+        CrewStatsPlugin.Logger.LogInfo($"Menü-Schalter auf {rows.Count} Reihen verteilt (Größe {scale:P0}).");
+    }
+
+    private static float Round(float value) => (float)Math.Round(value, 2);
+
+    /// <summary>Verschiedene Reihen (y-Werte), oben zuerst.</summary>
+    private static List<float> RowsOf(List<Vector3> positions) =>
+        positions.Select(p => Round(p.y)).Distinct().OrderByDescending(y => y).ToList();
 
     private static void CreateOne(ToggleButtonBehaviour template, Transform parent, Vector3 position, Toggle toggle)
     {
@@ -100,10 +146,8 @@ internal static class MenuToggles
     /// </summary>
     private static Vector3 NextFreeSlot(List<Vector3> positions)
     {
-        static float Round(float value) => (float)Math.Round(value, 2);
-
         var columns = positions.Select(p => Round(p.x)).Distinct().OrderBy(x => x).ToList();
-        var rows = positions.Select(p => Round(p.y)).Distinct().OrderByDescending(y => y).ToList();
+        var rows = RowsOf(positions);
         var z = positions.Count > 0 ? positions[0].z : 0f;
         if (columns.Count == 0) return Vector3.zero;
 
