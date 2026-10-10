@@ -11,7 +11,7 @@ namespace CrewStats;
 /// Aufgaben → Lebende stumm + taub, Tote reden miteinander; Meeting (inkl. Rauswurf-Animation) →
 /// Lebende reden, Tote stumm; Spielende/Lobby → alle frei. Gilt im Voice-Channel des Spielers mit der Mod.
 /// Funktioniert auch ohne Host zu sein – Meeting und Tote sieht jeder Spieler ohnehin.
-/// JSON-Format ↔ crewbot/services/automute.py (beide Seiten gemeinsam ändern!).
+/// JSON-Format ↔ Bot: services/AutoMute.kt (beide Seiten gemeinsam ändern!).
 /// </summary>
 internal static class AutoMute
 {

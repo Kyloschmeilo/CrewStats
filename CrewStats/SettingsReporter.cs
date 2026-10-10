@@ -11,7 +11,7 @@ namespace CrewStats;
 /// Schickt beim Rundenstart alle Lobby-Einstellungen an den Bot (für /rundensettings).
 /// Liest die Optionen generisch über die Options-Enums aus, damit neue Einstellungen aus
 /// Spiel-Updates automatisch mitkommen. Funktioniert auch ohne Host zu sein.
-/// JSON-Format ↔ crewbot/services/game_settings.py (beide Seiten gemeinsam ändern!).
+/// JSON-Format ↔ Bot: services/GameSettings.kt (beide Seiten gemeinsam ändern!).
 /// </summary>
 internal static class SettingsReporter
 {

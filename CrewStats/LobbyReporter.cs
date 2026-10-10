@@ -9,7 +9,7 @@ namespace CrewStats;
 /// (offen + Spielerzahl, Runde läuft, geschlossen). Der Bot hält dazu eine Nachricht im
 /// Codes-Channel aktuell und sperrt während der Runde das Wettbüro.
 /// Spielerzahl-Änderungen werden gebündelt (höchstens alle 5 s), Zustandswechsel sofort gesendet.
-/// JSON-Format ↔ crewbot/services/lobby.py (beide Seiten gemeinsam ändern!).
+/// JSON-Format ↔ Bot: services/Lobby.kt (beide Seiten gemeinsam ändern!).
 /// </summary>
 internal static class LobbyReporter
 {
