@@ -4,6 +4,7 @@
 # Voraussetzung: GitHub-CLI `gh` installiert und eingeloggt (gh auth login).
 # Ablauf: 1. Version in CrewStats\CrewStats.csproj erhöhen (z.B. 1.1.0 -> 1.2.0)
 #         2. .\release.ps1 "Was ist neu"
+# Ohne Windows-PC (z.B. aus der Cloud): GitHub Actions → „Release“ (.github/workflows/release.yml).
 
 param([Parameter(Mandatory = $true)][string]$Notes)
 

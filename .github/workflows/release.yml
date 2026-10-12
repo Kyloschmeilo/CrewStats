@@ -1,0 +1,45 @@
+# Neues CrewStats-Release ohne Windows-PC (z.B. aus der Cloud) – sonst wie release.ps1:
+#   1. Version in CrewStats/CrewStats.csproj erhöhen, Notizen in release-notes/v<Version>.md, committen + pushen
+#   2. Actions → „Release“ → „Run workflow“
+# Baut die DLL und hängt CrewStats.dll + Installer ans Release. Alle Mods aktualisieren sich danach selbst.
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Version und Notizen prüfen
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep -oP '(?<=<Version>)[^<]+' CrewStats/CrewStats.csproj | head -1)
+          echo "Version: $VERSION"
+          test -n "$VERSION"
+          test -f "release-notes/v$VERSION.md" || { echo "::error::release-notes/v$VERSION.md fehlt"; exit 1; }
+          if grep -q 'DEIN-GITHUB-NAME' CrewStats/Updater.cs installer/CrewStats-Installer.bat; then
+            echo "::error::Kein GitHub-Repo eingetragen"; exit 1
+          fi
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "::error::Release v$VERSION gibt es schon – erst die Version in CrewStats.csproj erhöhen"; exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: DLL bauen
+        run: dotnet build CrewStats -c Release
+      - name: Release erstellen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" CrewStats/bin/Release/net6.0/CrewStats.dll installer/CrewStats-Installer.bat \
+            --target "$GITHUB_SHA" --title "CrewStats $VERSION" --notes-file "release-notes/v$VERSION.md"
