@@ -1,7 +1,8 @@
 # CrewStats – Host-only-Mod für Among Us
 
 Zeichnet als **Host** still die Rundendaten auf (Rollen, Kills, Meetings, Votes, Tasks,
-Sieger) und schickt sie **nach Rundenende** per Discord-Webhook an den Bot.
+Sieger) und schickt sie **nach Rundenende** per Discord-Webhook an den Bot. Außerdem: Auto-Mute,
+Lobby-Ankündigung, Hausregel „Kein Skip bei Notfall“ und Rollenwünsche aus Discord.
 Nur der Host braucht die Mod. Während der Runde wird nichts angezeigt.
 
 ## Bauen
@@ -36,6 +37,17 @@ sonst im Among-Us-Channel. Funktioniert auch, wenn man nicht Host ist.
 Bei jedem Rundenstart schickt die Mod alle Lobbyeinstellungen (Kill-Cooldown, Meetings, Tasks,
 Rollen …) an den Bot. `/rundensettings` zeigt immer den Stand der letzten Runde, mit Buttons für
 die Kategorien. Funktioniert auch, wenn man nicht Host ist.
+
+## Rollenwünsche (`/rollenwunsch`, `/rolle-zuweisen`)
+Im Discord wünscht man sich für 20 XP (2× pro Spieleabend) eine Rolle für die nächste Runde, Admins
+können Rollen kostenlos festlegen. Nur der Host braucht die Mod:
+1. Host drückt **Start** → die Mod schickt die Friendcodes der Lobby über den Webhook an den Bot und
+   bekommt die offenen Wünsche dieser Spieler zurück (verschlüsselt, im Channel nicht lesbar).
+2. Im Chat steht offen, wie viele Rollen per Discord kommen (z.B. „2 Wünsche, 1 vom Admin festgelegt“).
+3. Bei der Rollenvergabe tauscht die Mod die gewürfelten Rollen so, dass die Wünsche passen – Anzahl
+   Impostor und Spezialrollen bleiben wie eingestellt. Geht ein Wunsch nicht, bekommt der Spieler die XP zurück.
+
+Abschalten: `[Rollenwuensche] Enabled = false`. Ohne Wünsche greift die Mod nicht in die Rollenvergabe ein.
 
 ## Nach einem Among-Us-Update
 In `CrewStats.csproj` die Version von `AmongUs.GameLibs.Steam` auf die neue Spielversion

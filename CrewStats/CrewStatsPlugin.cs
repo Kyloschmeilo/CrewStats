@@ -25,6 +25,7 @@ public partial class CrewStatsPlugin : BasePlugin
     internal static ConfigEntry<bool> AutoUpdate { get; private set; } = null!;
     internal static ConfigEntry<bool> AnnounceLobby { get; private set; } = null!;
     internal static ConfigEntry<bool> NoSkipOnEmergency { get; private set; } = null!;
+    internal static ConfigEntry<bool> RoleWishesEnabled { get; private set; } = null!;
     internal static string DataDirectory { get; private set; } = null!;
 
     public Harmony Harmony { get; } = new(Id);
@@ -55,6 +56,13 @@ public partial class CrewStatsPlugin : BasePlugin
             false,
             "Hausregel als Host: Bei Meetings über den Notfall-Knopf werden Skip-Stimmen abgelehnt, " +
             "die Spieler müssen jemanden wählen. Schalter im Spiel: ESC -> Allgemein -> \"Kein Skip bei Notfall\".");
+        RoleWishesEnabled = Config.Bind(
+            "Rollenwuensche",
+            "Enabled",
+            true,
+            "Als Host die Rollenwünsche aus Discord (/rollenwunsch, Admins: /rolle-zuweisen) bei der Rollenvergabe " +
+            "berücksichtigen. Vor dem Start steht im Chat, wie viele Rollen per Discord festgelegt sind. " +
+            "Anzahl Impostor und Spezialrollen bleiben wie eingestellt.");
         AnnounceLobby = Config.Bind(
             "Lobby",
             "Announce",

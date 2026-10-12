@@ -1,4 +1,5 @@
 using System;
+using AmongUs.GameOptions;
 using HarmonyLib;
 using InnerNet;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
@@ -6,8 +7,9 @@ using Il2CppInterop.Runtime.InteropTypes.Arrays;
 namespace CrewStats;
 
 // Alle Patches lesen nur mit (Postfix/Prefix ohne Rückgabewert) und verändern das Spiel nicht –
-// Ausnahmen: die zusätzlichen Schalter im Einstellungsmenü und die optionale Hausregel
-// „Kein Skip bei Notfall“ (CastVote-Prefix, nur als Host und nur wenn eingeschaltet).
+// Ausnahmen: die zusätzlichen Schalter im Einstellungsmenü, die optionale Hausregel
+// „Kein Skip bei Notfall“ (CastVote-Prefix, nur als Host und nur wenn eingeschaltet) und die
+// Rollenwünsche aus Discord (RpcSetRole-Prefix, nur als Host und nur, wenn es Wünsche gibt).
 // Jeder Patch fängt eigene Fehler ab, damit die Mod das Spiel niemals stören kann.
 
 [HarmonyPatch(typeof(IntroCutscene), nameof(IntroCutscene.CoBegin))]
@@ -80,6 +82,7 @@ internal static class GameEndPatch
     public static void Prefix(EndGameResult endGameResult)
     {
         Safe.Run(AutoMute.Stop);
+        Safe.Run(RoleWishes.Reset);
         Safe.Run(() => GameRecorder.OnGameEnd(endGameResult.GameOverReason));
     }
 }
@@ -91,7 +94,42 @@ internal static class ExitGamePatch
     {
         Safe.Run(AutoMute.Stop);
         Safe.Run(LobbyReporter.Close);
+        Safe.Run(RoleWishes.Reset);
         Safe.Run(GameRecorder.OnExitGame); // nur für den Freeplay-Test (Config: Debug.RecordFreeplay)
+    }
+}
+
+// ---------- Rollenwünsche aus Discord (nur als Host und nur, wenn es Wünsche gibt) ----------
+
+[HarmonyPatch(typeof(GameStartManager), nameof(GameStartManager.BeginGame))]
+internal static class BeginGamePatch
+{
+    public static void Postfix() => Safe.Run(RoleWishes.OnStartPressed);
+}
+
+[HarmonyPatch(typeof(RoleManager), nameof(RoleManager.SelectRoles))]
+internal static class SelectRolesPatch
+{
+    public static void Prefix() => Safe.Run(RoleWishes.BeforeSelectRoles);
+
+    public static void Postfix() => Safe.Run(RoleWishes.AfterSelectRoles);
+}
+
+[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.RpcSetRole))]
+internal static class RpcSetRolePatch
+{
+    // false = Rolle noch nicht senden (während der Rollenvergabe mit Wünschen). Bei einem Fehler normal weiter.
+    public static bool Prefix(PlayerControl __instance, RoleTypes roleType, bool canOverrideRole)
+    {
+        try
+        {
+            return RoleWishes.OnRpcSetRole(__instance, roleType, canOverrideRole);
+        }
+        catch (Exception exc)
+        {
+            CrewStatsPlugin.Logger.LogError($"Rollenwunsch-Fehler (Rolle wird normal gesetzt): {exc}");
+            return true;
+        }
     }
 }
 
@@ -102,8 +140,9 @@ internal static class HudUpdatePatch
 {
     public static void Postfix()
     {
-        AutoMute.Tick(); // beide fangen eigene Fehler ab
+        AutoMute.Tick(); // alle fangen eigene Fehler ab
         LobbyReporter.Tick();
+        RoleWishes.Tick();
     }
 }
 
