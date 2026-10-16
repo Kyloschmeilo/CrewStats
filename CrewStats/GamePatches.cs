@@ -143,6 +143,7 @@ internal static class HudUpdatePatch
         AutoMute.Tick(); // alle fangen eigene Fehler ab
         LobbyReporter.Tick();
         RoleWishes.Tick();
+        NoSkipRule.Tick();
     }
 }
 

@@ -44,6 +44,9 @@ können Rollen kostenlos festlegen. Nur der Host braucht die Mod:
 1. Host drückt **Start** → die Mod schickt die Friendcodes der Lobby über den Webhook an den Bot und
    bekommt die offenen Wünsche dieser Spieler zurück (verschlüsselt, im Channel nicht lesbar).
 2. Im Chat steht offen, wie viele Rollen per Discord kommen (z.B. „2 Wünsche, 1 vom Admin festgelegt“).
+   Dafür braucht der Host im Spiel **Free Chat**: Mit „Nur Quick Chat“ wirft der Among-Us-Server jeden raus,
+   der freien Text sendet (Grund „Hacking“, danach für die Lobby gesperrt). Die Mod sendet dann nichts und
+   lässt die Wünsche für eine spätere Runde offen (siehe `GameChat.cs`).
 3. Bei der Rollenvergabe tauscht die Mod die gewürfelten Rollen so, dass die Wünsche passen – Anzahl
    Impostor und Spezialrollen bleiben wie eingestellt. Geht ein Wunsch nicht, bekommt der Spieler die XP zurück.
 

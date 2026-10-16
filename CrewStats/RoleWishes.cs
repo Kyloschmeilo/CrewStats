@@ -196,6 +196,8 @@ internal static class RoleWishes
     /// <summary>
     /// Jeden Frame (HudManager.Update): den Hinweis des letzten Abrufs in den Lobby-Chat schreiben. Läuft die Runde
     /// schon, bevor er raus ist, werden die Wünsche diesmal nicht angewendet (nichts passiert heimlich).
+    /// Ohne Free Chat beim Host geht der Hinweis nicht (der Server würde den Host rauswerfen) – dann bleiben die
+    /// Wünsche beim Bot offen für eine spätere Runde.
     /// </summary>
     public static void Tick()
     {
@@ -203,18 +205,37 @@ internal static class RoleWishes
         try
         {
             var client = AmongUsClient.Instance;
-            var local = PlayerControl.LocalPlayer;
-            if (client == null || !client.AmHost || local == null) return;
+            if (client == null || !client.AmHost || PlayerControl.LocalPlayer == null) return;
             if (client.GameState != InnerNetClient.GameStates.Joined) return; // Runde läuft schon – zu spät
             string? hint;
+            lock (Lock) hint = _chatHint;
+            if (hint == null) return;
+
+            if (!GameChat.FreeChatAllowed)
+            {
+                List<Wish>? skipped;
+                lock (Lock)
+                {
+                    if (_chatHint != hint) return; // neuer Abruf – nächster Frame
+                    skipped = _ready;
+                    _ready = null;
+                    _chatHint = null;
+                }
+                if (skipped is not { Count: > 0 }) return;
+                ReportAbsent(skipped);
+                GameChat.ShowLocal($"CrewStats: Rollen per Discord ({skipped.Count}) diesmal übersprungen – dafür braucht der Host " +
+                                   "im Spiel Free Chat. Die Wünsche bleiben für eine spätere Runde offen.");
+                CrewStatsPlugin.Logger.LogWarning("Rollenwünsche: kein Free Chat beim Host – kein Hinweis möglich, Wünsche bleiben offen.");
+                return;
+            }
+
+            if (!GameChat.TrySend(hint)) return; // Sende-Pause – nächster Frame
             lock (Lock)
             {
-                hint = _chatHint;
+                if (_chatHint != hint) return;
                 _chatHint = null;
+                _announced = true;
             }
-            if (hint == null) return;
-            local.RpcSendChat(hint);
-            lock (Lock) _announced = true;
         }
         catch (Exception exc)
         {

@@ -12,11 +12,13 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam**, die mit unserem Discord-B
   im Abschnitt `[Lobby]` der Config.
 - 🚫 **Kein Skip bei Notfall** (Hausregel, nur als Host) – bei Meetings über den Notfall-Knopf
   wird „Überspringen“ abgelehnt, man muss jemanden wählen. An/aus unter **ESC → Allgemein**.
+  Den Hinweis im Chat schreibt die Mod nur, wenn der Host im Spiel **Free Chat** eingestellt hat.
 - 🎭 **Rollenwünsche** (nur als Host) – im Discord kann sich jeder mit `/rollenwunsch` für 20 XP
   (2× pro Spieleabend) eine Rolle für die nächste Runde wünschen, Admins legen mit `/rolle-zuweisen`
   Rollen fest. Drückt der Host auf Start, holt die Mod die Wünsche der Spieler in der Lobby ab und
   schreibt in den Chat, wie viele Rollen per Discord kommen. Anzahl Impostor und Spezialrollen bleiben
-  wie eingestellt; was nicht klappt, gibt die XP zurück. Abschalten: `Enabled = false` im Abschnitt
+  wie eingestellt; was nicht klappt, gibt die XP zurück. Der Host braucht dafür im Spiel **Free Chat**
+  (mit „Nur Quick Chat“ bleiben die Wünsche für eine spätere Runde offen). Abschalten: `Enabled = false` im Abschnitt
   `[Rollenwuensche]` der Config.
 - 🏅 Aus den Runden berechnet der Bot außerdem **Highlights**, **Erfolge** (`/erfolge`),
   **Rivalen** (`/stats`) und einen **Spieleabend-Recap** (`/recap`).

@@ -61,7 +61,7 @@ public partial class CrewStatsPlugin : BasePlugin
             "Enabled",
             true,
             "Als Host die Rollenwünsche aus Discord (/rollenwunsch, Admins: /rolle-zuweisen) bei der Rollenvergabe " +
-            "berücksichtigen. Vor dem Start steht im Chat, wie viele Rollen per Discord festgelegt sind. " +
+            "berücksichtigen. Vor dem Start steht im Chat, wie viele Rollen per Discord festgelegt sind (dafür braucht der Host Free Chat). " +
             "Anzahl Impostor und Spezialrollen bleiben wie eingestellt.");
         AnnounceLobby = Config.Bind(
             "Lobby",
