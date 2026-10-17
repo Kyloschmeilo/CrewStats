@@ -26,6 +26,7 @@ public partial class CrewStatsPlugin : BasePlugin
     internal static ConfigEntry<bool> AnnounceLobby { get; private set; } = null!;
     internal static ConfigEntry<bool> NoSkipOnEmergency { get; private set; } = null!;
     internal static ConfigEntry<bool> RoleWishesEnabled { get; private set; } = null!;
+    internal static ConfigEntry<bool> ShuffleRoles { get; private set; } = null!;
     internal static string DataDirectory { get; private set; } = null!;
 
     public Harmony Harmony { get; } = new(Id);
@@ -63,6 +64,13 @@ public partial class CrewStatsPlugin : BasePlugin
             "Als Host die Rollenwünsche aus Discord (/rollenwunsch, Admins: /rolle-zuweisen) bei der Rollenvergabe " +
             "berücksichtigen. " +
             "Anzahl Impostor und Spezialrollen bleiben wie eingestellt.");
+        ShuffleRoles = Config.Bind(
+            "Rollen",
+            "SelbstWuerfeln",
+            true,
+            "Als Host würfelt die Mod selbst (echter Zufall), wer welche Rolle bekommt – jeder hat dieselbe Chance. " +
+            "Welche Rollen es gibt und wie viele Impostor, bestimmen weiter die Lobby-Einstellungen. " +
+            "false = das Spiel verteilt die Rollen wie ohne Mod.");
         AnnounceLobby = Config.Bind(
             "Lobby",
             "Announce",

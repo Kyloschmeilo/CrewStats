@@ -9,7 +9,7 @@ namespace CrewStats;
 // Alle Patches lesen nur mit (Postfix/Prefix ohne Rückgabewert) und verändern das Spiel nicht –
 // Ausnahmen: die zusätzlichen Schalter im Einstellungsmenü, die optionale Hausregel
 // „Kein Skip bei Notfall“ (CastVote-Prefix, nur als Host und nur wenn eingeschaltet) und die
-// Rollenwünsche aus Discord (RpcSetRole-Prefix, nur als Host und nur, wenn es Wünsche gibt).
+// Rollenvergabe (RpcSetRole-Prefix, nur als Host: Rollen selbst würfeln und Rollenwünsche aus Discord).
 // Jeder Patch fängt eigene Fehler ab, damit die Mod das Spiel niemals stören kann.
 
 [HarmonyPatch(typeof(IntroCutscene), nameof(IntroCutscene.CoBegin))]
@@ -93,7 +93,7 @@ internal static class ExitGamePatch
     }
 }
 
-// ---------- Rollenwünsche aus Discord (nur als Host und nur, wenn es Wünsche gibt) ----------
+// ---------- Rollenvergabe: selbst würfeln + Rollenwünsche aus Discord (nur als Host) ----------
 
 [HarmonyPatch(typeof(GameStartManager), nameof(GameStartManager.BeginGame))]
 internal static class BeginGamePatch
@@ -112,7 +112,7 @@ internal static class SelectRolesPatch
 [HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.RpcSetRole))]
 internal static class RpcSetRolePatch
 {
-    // false = Rolle noch nicht senden (während der Rollenvergabe mit Wünschen). Bei einem Fehler normal weiter.
+    // false = Rolle noch nicht senden (wird erst gesammelt, siehe RoleWishes). Bei einem Fehler normal weiter.
     public static bool Prefix(PlayerControl __instance, RoleTypes roleType, bool canOverrideRole)
     {
         try

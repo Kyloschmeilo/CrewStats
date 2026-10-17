@@ -18,6 +18,9 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam**, die mit unserem Discord-B
   berücksichtigt sie bei der Rollenvergabe. Anzahl Impostor und Spezialrollen bleiben wie eingestellt;
   was nicht klappt, gibt die XP zurück. Abschalten: `Enabled = false` im Abschnitt
   `[Rollenwuensche]` der Config.
+- 🎲 **Rollen selbst gewürfelt** (nur als Host) – die Mod verteilt mit echtem Zufall, wer welche Rolle bekommt;
+  jeder hat in jeder Runde dieselbe Chance. Welche Rollen es gibt, bestimmen die Lobby-Einstellungen.
+  Abschalten: `SelbstWuerfeln = false` im Abschnitt `[Rollen]` der Config.
 - 🏅 Aus den Runden berechnet der Bot außerdem **Highlights**, **Erfolge** (`/erfolge`),
   **Rivalen** (`/stats`) und einen **Spieleabend-Recap** (`/recap`).
 

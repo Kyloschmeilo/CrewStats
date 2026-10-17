@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -20,11 +21,12 @@ namespace CrewStats;
 ///      schreibt die offenen Wünsche dieser Spieler in genau diese Nachricht; die Mod liest sie und löscht sie.
 ///   2. Kein Hinweis im Spiel (Wunsch des Nutzers: Chat-Nachrichten nerven) – offen sind die Wünsche über die
 ///      Slash-Commands, die jeder benutzen kann. Deshalb auch kein RpcSendChat (Quick-Chat-Kick, siehe CLAUDE.md).
-///   3. Rollenvergabe (RoleManager.SelectRoles): die gewürfelten Rollen werden erst gesammelt, dann nach
-///      <see cref="RoleWishPlanner"/> getauscht und erst danach an alle verschickt. Anzahl Impostor und
+///   3. Rollenvergabe (RoleManager.SelectRoles): die Rollen des Spiels werden erst gesammelt, mit Config
+///      [Rollen] SelbstWuerfeln (Standard an, Wunsch des Nutzers) von der Mod selbst neu verteilt (<see cref="Shuffle"/>),
+///      dann nach <see cref="RoleWishPlanner"/> getauscht und erst danach an alle verschickt. Anzahl Impostor und
 ///      Spezialrollen bleiben wie eingestellt.
 ///   4. Rückmeldung an den Bot: erfüllt / nicht möglich (XP zurück) / nicht dabei (Wunsch bleibt offen).
-/// Ohne Wünsche greift die Mod nicht in die Rollenvergabe ein. Ins Log kommen nur Anzahlen, keine Rollen.
+/// Ohne Wünsche und mit SelbstWuerfeln = false greift die Mod nicht ein. Ins Log kommen nur Anzahlen, keine Rollen.
 /// Protokoll ↔ Bot: services/RoleWishes.kt (beide Seiten gemeinsam ändern!).
 /// </summary>
 internal static class RoleWishes
@@ -46,6 +48,7 @@ internal static class RoleWishes
 
     // Nur auf dem Spiel-Thread
     private static bool _capturing;
+    private static bool _shuffle; // diese Runde würfelt die Mod selbst
     private static int _captureFrame;
     private static List<Wish>? _active;
     private static readonly List<Captured> CapturedRoles = new();
@@ -188,10 +191,14 @@ internal static class RoleWishes
     // 2. ROLLENVERGABE (Spiel-Thread)
     // ==========================================
 
-    /// <summary>RoleManager.SelectRoles (Prefix): gibt es Wünsche, werden die gewürfelten Rollen erst gesammelt.</summary>
+    /// <summary>
+    /// RoleManager.SelectRoles (Prefix): würfelt die Mod selbst (Config [Rollen] SelbstWuerfeln) oder gibt es Wünsche,
+    /// werden die Rollen des Spiels erst gesammelt.
+    /// </summary>
     public static void BeforeSelectRoles()
     {
         _capturing = false;
+        _shuffle = false;
         _active = null;
         CapturedRoles.Clear();
 
@@ -204,19 +211,23 @@ internal static class RoleWishes
             _ready = null;
             _generation++; // ein noch laufender Abruf kommt zu spät
         }
-        if (wishes == null) return;
-        var alreadyApplied = wishes.Where(w => AppliedIds.Contains(w.Id)).ToList();
-        if (alreadyApplied.Count > 0) ReportResults(alreadyApplied.Select(w => Result(w.Id, "applied")).ToList()); // Rückmeldung ging verloren
-        wishes = wishes.Where(w => !AppliedIds.Contains(w.Id)).ToList();
-        if (wishes.Count == 0) return;
-        if (!usable || !Enabled || !IsNormalHost())
+        if (wishes != null)
         {
-            // Abruf zu alt (Start abgebrochen?) oder abgeschaltet: diesmal nicht – beim Bot wieder freigeben (nächste Runde)
-            ReportAbsent(wishes);
-            return;
+            var alreadyApplied = wishes.Where(w => AppliedIds.Contains(w.Id)).ToList();
+            if (alreadyApplied.Count > 0) ReportResults(alreadyApplied.Select(w => Result(w.Id, "applied")).ToList()); // Rückmeldung ging verloren
+            wishes = wishes.Where(w => !AppliedIds.Contains(w.Id)).ToList();
+            if (wishes.Count > 0 && (!usable || !Enabled || !IsNormalHost()))
+            {
+                // Abruf zu alt (Start abgebrochen?) oder abgeschaltet: diesmal nicht – beim Bot wieder freigeben (nächste Runde)
+                ReportAbsent(wishes);
+                wishes = null;
+            }
         }
 
-        _active = wishes;
+        var shuffle = CrewStatsPlugin.ShuffleRoles.Value && IsNormalHost();
+        if (wishes is not { Count: > 0 } && !shuffle) return;
+        _active = wishes ?? new List<Wish>();
+        _shuffle = shuffle;
         _capturing = true;
         _captureFrame = Time.frameCount;
     }
@@ -244,7 +255,7 @@ internal static class RoleWishes
         return false;
     }
 
-    /// <summary>RoleManager.SelectRoles (Postfix): Wünsche einplanen und alle Rollen verschicken.</summary>
+    /// <summary>RoleManager.SelectRoles (Postfix): ggf. selbst würfeln, Wünsche einplanen und alle Rollen verschicken.</summary>
     public static void AfterSelectRoles()
     {
         if (!_capturing) return;
@@ -253,16 +264,23 @@ internal static class RoleWishes
         CapturedRoles.Clear();
         var wishes = _active ?? new List<Wish>();
         _active = null;
+        var shuffle = _shuffle;
+        _shuffle = false;
 
         var roles = captured.Select(c => c.Role).ToArray();
-        List<object> results;
+        var results = new List<object>();
         try
         {
-            results = Plan(captured, wishes, roles);
+            if (shuffle)
+            {
+                Shuffle(roles);
+                CrewStatsPlugin.Logger.LogInfo($"Rollen selbst gewürfelt ({roles.Length} Spieler).");
+            }
+            if (wishes.Count > 0) results = Plan(captured, wishes, roles);
         }
         catch (Exception exc)
         {
-            CrewStatsPlugin.Logger.LogError($"Rollenwünsche: Fehler – Runde läuft mit den gewürfelten Rollen: {exc}");
+            CrewStatsPlugin.Logger.LogError($"Rollenvergabe: Fehler – Runde läuft mit den Rollen des Spiels: {exc}");
             roles = captured.Select(c => c.Role).ToArray();
             results = wishes.Select(w => Result(w.Id, "absent")).ToList();
         }
@@ -282,7 +300,21 @@ internal static class RoleWishes
             }
         }
 
-        ReportResults(results);
+        if (results.Count > 0) ReportResults(results);
+    }
+
+    /// <summary>
+    /// Verteilt die Rollen neu (Fisher-Yates mit dem Kryptozufall von .NET, nicht dem Zufall des Spiels): jeder
+    /// Spieler – auch der Host – hat dieselbe Chance auf jede Rolle. Welche Rollen es gibt, bleibt wie vom Spiel
+    /// nach den Lobby-Einstellungen bestimmt (Anzahl Impostor, Spezialrollen samt Chance).
+    /// </summary>
+    private static void Shuffle(RoleTypes[] roles)
+    {
+        for (var i = roles.Length - 1; i > 0; i--)
+        {
+            var j = RandomNumberGenerator.GetInt32(i + 1);
+            (roles[i], roles[j]) = (roles[j], roles[i]);
+        }
     }
 
     /// <summary>Schreibt die neuen Rollen in <paramref name="roles"/> und liefert die Rückmeldung für den Bot.</summary>
@@ -296,7 +328,7 @@ internal static class RoleWishes
         }
         var options = GameOptionsManager.Instance.CurrentGameOptions;
         var planner = new RoleWishPlanner(
-            captured.Select(c => (c.Player.PlayerId, (int)c.Role)),
+            captured.Select((c, i) => (c.Player.PlayerId, (int)roles[i])), // ggf. schon selbst gewürfelt
             role => RoleManager.IsImpostorRole((RoleTypes)role),
             role => MaxCount(options, (RoleTypes)role),
             (int)RoleTypes.Crewmate,
@@ -390,6 +422,7 @@ internal static class RoleWishes
     private static void Release()
     {
         _capturing = false;
+        _shuffle = false;
         _active = null;
         var captured = CapturedRoles.ToList();
         CapturedRoles.Clear();

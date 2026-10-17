@@ -38,6 +38,12 @@ Bei jedem Rundenstart schickt die Mod alle Lobbyeinstellungen (Kill-Cooldown, Me
 Rollen …) an den Bot. `/rundensettings` zeigt immer den Stand der letzten Runde, mit Buttons für
 die Kategorien. Funktioniert auch, wenn man nicht Host ist.
 
+## Rollen selbst würfeln (`[Rollen] SelbstWuerfeln`, Standard an)
+Als Host sammelt die Mod die Rollen, die das Spiel nach den Lobby-Einstellungen vergeben will, und verteilt
+sie neu (Fisher-Yates mit `RandomNumberGenerator`, nicht dem Zufall des Spiels) – jeder Spieler, auch der Host,
+hat dieselbe Chance auf jede Rolle. Danach kommen die Rollenwünsche. Wunsch des Nutzers, weil es sich so anfühlte,
+als bekämen manche immer Crewmate (war Zufall, das Spiel merkt sich keine Rollen).
+
 ## Rollenwünsche (`/rollenwunsch`, `/rolle-zuweisen`)
 Im Discord wünscht man sich für 20 XP (2× pro Spieleabend) eine Rolle für die nächste Runde, Admins
 können Rollen kostenlos festlegen. Nur der Host braucht die Mod:
