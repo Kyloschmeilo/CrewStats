@@ -43,14 +43,12 @@ Im Discord wünscht man sich für 20 XP (2× pro Spieleabend) eine Rolle für di
 können Rollen kostenlos festlegen. Nur der Host braucht die Mod:
 1. Host drückt **Start** → die Mod schickt die Friendcodes der Lobby über den Webhook an den Bot und
    bekommt die offenen Wünsche dieser Spieler zurück (verschlüsselt, im Channel nicht lesbar).
-2. Im Chat steht offen, wie viele Rollen per Discord kommen (z.B. „2 Wünsche, 1 vom Admin festgelegt“).
-   Dafür braucht der Host im Spiel **Free Chat**: Mit „Nur Quick Chat“ wirft der Among-Us-Server jeden raus,
-   der freien Text sendet (Grund „Hacking“, danach für die Lobby gesperrt). Die Mod sendet dann nichts und
-   lässt die Wünsche für eine spätere Runde offen (siehe `GameChat.cs`).
-3. Bei der Rollenvergabe tauscht die Mod die gewürfelten Rollen so, dass die Wünsche passen – Anzahl
+2. Bei der Rollenvergabe tauscht die Mod die gewürfelten Rollen so, dass die Wünsche passen – Anzahl
    Impostor und Spezialrollen bleiben wie eingestellt. Geht ein Wunsch nicht, bekommt der Spieler die XP zurück.
 
 Abschalten: `[Rollenwuensche] Enabled = false`. Ohne Wünsche greift die Mod nicht in die Rollenvergabe ein.
+Im Spiel erscheint kein Hinweis (Chat-Nachrichten haben genervt). Falls doch mal wieder Chat: nie `RpcSendChat`,
+wenn der Host „Nur Quick Chat“ hat – der Server kickt ihn sonst als „Hacking“.
 
 ## Nach einem Among-Us-Update
 In `CrewStats.csproj` die Version von `AmongUs.GameLibs.Steam` auf die neue Spielversion

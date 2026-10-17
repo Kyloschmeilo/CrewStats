@@ -18,7 +18,8 @@ namespace CrewStats;
 /// Nur als Host, nur in Online-Lobbys im normalen Modus (kein Hide &amp; Seek, kein Freeplay):
 ///   1. Start-Knopf: die Mod schickt die Friendcodes der Lobby (verschlüsselt) über den Webhook an den Bot. Der Bot
 ///      schreibt die offenen Wünsche dieser Spieler in genau diese Nachricht; die Mod liest sie und löscht sie.
-///   2. Offen statt heimlich: der Host schreibt vor dem Start in den Chat, wie viele Rollen per Discord kommen.
+///   2. Kein Hinweis im Spiel (Wunsch des Nutzers: Chat-Nachrichten nerven) – offen sind die Wünsche über die
+///      Slash-Commands, die jeder benutzen kann. Deshalb auch kein RpcSendChat (Quick-Chat-Kick, siehe CLAUDE.md).
 ///   3. Rollenvergabe (RoleManager.SelectRoles): die gewürfelten Rollen werden erst gesammelt, dann nach
 ///      <see cref="RoleWishPlanner"/> getauscht und erst danach an alle verschickt. Anzahl Impostor und
 ///      Spezialrollen bleiben wie eingestellt.
@@ -42,8 +43,6 @@ internal static class RoleWishes
     private static int _generation; // jeder Start-Knopf / jede Rollenvergabe macht ältere Abrufe ungültig
     private static List<Wish>? _ready;
     private static DateTime _readyAt;
-    private static bool _announced; // Chat-Hinweis ist raus – erst dann werden die Wünsche angewendet
-    private static string? _chatHint;
 
     // Nur auf dem Spiel-Thread
     private static bool _capturing;
@@ -80,8 +79,6 @@ internal static class RoleWishes
         {
             generation = ++_generation;
             _ready = null;
-            _announced = false;
-            _chatHint = null;
         }
         Task.Run(() => FetchAsync(BaseUrl(url), token, players, generation));
     }
@@ -108,8 +105,6 @@ internal static class RoleWishes
             {
                 _ready = wishes;
                 _readyAt = DateTime.UtcNow;
-                _chatHint = ChatHint(wishes);
-                _announced = _chatHint == null; // ohne Wünsche gibt es nichts anzukündigen
             }
         }
         if (current)
@@ -190,72 +185,7 @@ internal static class RoleWishes
     }
 
     // ==========================================
-    // 2. CHAT-HINWEIS (Spiel-Thread)
-    // ==========================================
-
-    /// <summary>
-    /// Jeden Frame (HudManager.Update): den Hinweis des letzten Abrufs in den Lobby-Chat schreiben. Läuft die Runde
-    /// schon, bevor er raus ist, werden die Wünsche diesmal nicht angewendet (nichts passiert heimlich).
-    /// Ohne Free Chat beim Host geht der Hinweis nicht (der Server würde den Host rauswerfen) – dann bleiben die
-    /// Wünsche beim Bot offen für eine spätere Runde.
-    /// </summary>
-    public static void Tick()
-    {
-        if (Volatile.Read(ref _chatHint) == null) return;
-        try
-        {
-            var client = AmongUsClient.Instance;
-            if (client == null || !client.AmHost || PlayerControl.LocalPlayer == null) return;
-            if (client.GameState != InnerNetClient.GameStates.Joined) return; // Runde läuft schon – zu spät
-            string? hint;
-            lock (Lock) hint = _chatHint;
-            if (hint == null) return;
-
-            if (!GameChat.FreeChatAllowed)
-            {
-                List<Wish>? skipped;
-                lock (Lock)
-                {
-                    if (_chatHint != hint) return; // neuer Abruf – nächster Frame
-                    skipped = _ready;
-                    _ready = null;
-                    _chatHint = null;
-                }
-                if (skipped is not { Count: > 0 }) return;
-                ReportAbsent(skipped);
-                GameChat.ShowLocal($"CrewStats: Rollen per Discord ({skipped.Count}) diesmal übersprungen – dafür braucht der Host " +
-                                   "im Spiel Free Chat. Die Wünsche bleiben für eine spätere Runde offen.");
-                CrewStatsPlugin.Logger.LogWarning("Rollenwünsche: kein Free Chat beim Host – kein Hinweis möglich, Wünsche bleiben offen.");
-                return;
-            }
-
-            if (!GameChat.TrySend(hint)) return; // Sende-Pause – nächster Frame
-            lock (Lock)
-            {
-                if (_chatHint != hint) return;
-                _chatHint = null;
-                _announced = true;
-            }
-        }
-        catch (Exception exc)
-        {
-            CrewStatsPlugin.Logger.LogError($"Rollenwünsche: Chat-Hinweis fehlgeschlagen: {exc}");
-        }
-    }
-
-    private static string? ChatHint(List<Wish> wishes)
-    {
-        var wished = wishes.Count(w => !w.Admin);
-        var assigned = wishes.Count(w => w.Admin);
-        if (wished + assigned == 0) return null;
-        var parts = new List<string>();
-        if (wished > 0) parts.Add(wished == 1 ? "1 Wunsch" : $"{wished} Wünsche");
-        if (assigned > 0) parts.Add($"{assigned} vom Admin festgelegt");
-        return $"CrewStats: Rollen per Discord in dieser Runde - {string.Join(", ", parts)}.";
-    }
-
-    // ==========================================
-    // 3. ROLLENVERGABE (Spiel-Thread)
+    // 2. ROLLENVERGABE (Spiel-Thread)
     // ==========================================
 
     /// <summary>RoleManager.SelectRoles (Prefix): gibt es Wünsche, werden die gewürfelten Rollen erst gesammelt.</summary>
@@ -270,10 +200,8 @@ internal static class RoleWishes
         lock (Lock)
         {
             wishes = _ready;
-            usable = wishes != null && _announced && DateTime.UtcNow - _readyAt <= MaxWishAge;
+            usable = wishes != null && DateTime.UtcNow - _readyAt <= MaxWishAge;
             _ready = null;
-            _chatHint = null;
-            _announced = false;
             _generation++; // ein noch laufender Abruf kommt zu spät
         }
         if (wishes == null) return;
@@ -283,7 +211,7 @@ internal static class RoleWishes
         if (wishes.Count == 0) return;
         if (!usable || !Enabled || !IsNormalHost())
         {
-            // Nicht angekündigt oder zu alt: diesmal nicht – beim Bot wieder freigeben (gilt dann für die nächste Runde)
+            // Abruf zu alt (Start abgebrochen?) oder abgeschaltet: diesmal nicht – beim Bot wieder freigeben (nächste Runde)
             ReportAbsent(wishes);
             return;
         }
@@ -454,8 +382,6 @@ internal static class RoleWishes
         lock (Lock)
         {
             _ready = null;
-            _announced = false;
-            _chatHint = null;
             _generation++;
         }
     }
@@ -481,7 +407,7 @@ internal static class RoleWishes
     }
 
     // ==========================================
-    // 4. RÜCKMELDUNG
+    // 3. RÜCKMELDUNG
     // ==========================================
 
     private static object Result(long id, string status, string? reason = null) =>

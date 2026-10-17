@@ -44,12 +44,6 @@ internal static class StartMeetingPatch
 
 // ---------- Hausregel „Kein Skip bei Notfall“ ----------
 
-[HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.Start))]
-internal static class MeetingHudStartPatch
-{
-    public static void Postfix() => Safe.Run(NoSkipRule.OnMeetingHudShown);
-}
-
 [HarmonyPatch(typeof(MeetingHud), nameof(MeetingHud.CastVote))]
 internal static class CastVotePatch
 {
@@ -142,8 +136,6 @@ internal static class HudUpdatePatch
     {
         AutoMute.Tick(); // alle fangen eigene Fehler ab
         LobbyReporter.Tick();
-        RoleWishes.Tick();
-        NoSkipRule.Tick();
     }
 }
 
