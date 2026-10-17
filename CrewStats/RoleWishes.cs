@@ -305,8 +305,14 @@ internal static class RoleWishes
         }
         var index = CapturedRoles.FindIndex(c => c.Player.PlayerId == player.PlayerId);
         var captured = new Captured(player, role, canOverride);
-        if (index >= 0) CapturedRoles[index] = captured;
-        else CapturedRoles.Add(captured);
+        if (index < 0) CapturedRoles.Add(captured);
+        else if (canOverride) CapturedRoles[index] = captured;
+        else
+        {
+            // Wie im Spiel (roleAssigned): ohne canOverride gilt die erste Rolle. Sonst könnte z.B. ein
+            // Impostor nachträglich zum Crewmate werden, weil das Spiel die erste Rolle noch nicht sieht.
+            CrewStatsPlugin.Logger.LogWarning("Rollenwünsche: Spieler bekam während der Vergabe zweimal eine Rolle – die erste gilt.");
+        }
         return false;
     }
 
