@@ -9,7 +9,8 @@ namespace CrewStats;
 // Alle Patches lesen nur mit (Postfix/Prefix ohne Rückgabewert) und verändern das Spiel nicht –
 // Ausnahmen: die zusätzlichen Schalter im Einstellungsmenü, die optionale Hausregel
 // „Kein Skip bei Notfall“ (CastVote-Prefix, nur als Host und nur wenn eingeschaltet) und die
-// Rollenvergabe (RpcSetRole-Prefix, nur als Host: Rollen selbst würfeln und Rollenwünsche aus Discord).
+// Rollenvergabe (nur als Host: Spielerliste mischen per AssignRolesForTeam-Prefix; Rollenwünsche aus Discord per
+// RpcSetRole-Prefix, nur wenn es Wünsche gibt).
 // Jeder Patch fängt eigene Fehler ab, damit die Mod das Spiel niemals stören kann.
 
 [HarmonyPatch(typeof(IntroCutscene), nameof(IntroCutscene.CoBegin))]
@@ -99,6 +100,14 @@ internal static class ExitGamePatch
 internal static class BeginGamePatch
 {
     public static void Postfix() => Safe.Run(RoleWishes.OnStartPressed);
+}
+
+[HarmonyPatch(typeof(LogicRoleSelectionNormal), nameof(LogicRoleSelectionNormal.AssignRolesForTeam))]
+internal static class AssignRolesForTeamPatch
+{
+    // Spielerliste mischen, bevor das Spiel daraus die Rollen zieht (Config [Rollen] SelbstWuerfeln)
+    public static void Prefix(Il2CppSystem.Collections.Generic.List<NetworkedPlayerInfo> players, RoleTeamTypes team)
+        => Safe.Run(() => RoleShuffle.BeforeAssignTeam(players, team));
 }
 
 [HarmonyPatch(typeof(RoleManager), nameof(RoleManager.SelectRoles))]

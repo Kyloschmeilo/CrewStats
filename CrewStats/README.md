@@ -39,9 +39,11 @@ Rollen …) an den Bot. `/rundensettings` zeigt immer den Stand der letzten Rund
 die Kategorien. Funktioniert auch, wenn man nicht Host ist.
 
 ## Rollen selbst würfeln (`[Rollen] SelbstWuerfeln`, Standard an)
-Als Host sammelt die Mod die Rollen, die das Spiel nach den Lobby-Einstellungen vergeben will, und verteilt
-sie neu (Fisher-Yates mit `RandomNumberGenerator`, nicht dem Zufall des Spiels) – jeder Spieler, auch der Host,
-hat dieselbe Chance auf jede Rolle. Danach kommen die Rollenwünsche. Wunsch des Nutzers, weil es sich so anfühlte,
+Als Host mischt die Mod vor jeder Rollenvergabe die Spielerliste (`RoleShuffle.cs`, Prefix auf
+`LogicRoleSelectionNormal.AssignRolesForTeam`, Fisher-Yates mit `RandomNumberGenerator`). Das Spiel vergibt danach
+ganz normal, zieht aber aus der gemischten Liste – jeder Spieler, auch der Host, hat dieselbe Chance auf jede Rolle.
+In 1.3.2 hat die Mod dafür alle Rollen zurückgehalten und neu verschickt; die erste Runde damit fror beim Intro
+ein – deshalb seit 1.3.3 nur noch das Mischen. Zurückgehalten wird nur in Runden mit Rollenwünschen. Wunsch des Nutzers, weil es sich so anfühlte,
 als bekämen manche immer Crewmate (war Zufall, das Spiel merkt sich keine Rollen).
 
 ## Rollenwünsche (`/rollenwunsch`, `/rolle-zuweisen`)
