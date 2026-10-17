@@ -9,8 +9,8 @@ namespace CrewStats;
 // Alle Patches lesen nur mit (Postfix/Prefix ohne Rückgabewert) und verändern das Spiel nicht –
 // Ausnahmen: die zusätzlichen Schalter im Einstellungsmenü, die optionale Hausregel
 // „Kein Skip bei Notfall“ (CastVote-Prefix, nur als Host und nur wenn eingeschaltet) und die
-// Rollenvergabe (nur als Host: Spielerliste mischen per AssignRolesForTeam-Prefix; Rollenwünsche aus Discord per
-// RpcSetRole-Prefix, nur wenn es Wünsche gibt).
+// Rollenvergabe (nur als Host: eigene Würfel per HashRandom-Postfix während SelectRoles; Rollenwünsche aus Discord
+// per RpcSetRole-Prefix, nur wenn es Wünsche gibt).
 // Jeder Patch fängt eigene Fehler ab, damit die Mod das Spiel niemals stören kann.
 
 [HarmonyPatch(typeof(IntroCutscene), nameof(IntroCutscene.CoBegin))]
@@ -78,6 +78,7 @@ internal static class GameEndPatch
     {
         Safe.Run(AutoMute.Stop);
         Safe.Run(RoleWishes.Reset);
+        Safe.Run(RoleShuffle.Reset);
         Safe.Run(() => GameRecorder.OnGameEnd(endGameResult.GameOverReason));
     }
 }
@@ -90,6 +91,7 @@ internal static class ExitGamePatch
         Safe.Run(AutoMute.Stop);
         Safe.Run(LobbyReporter.Close);
         Safe.Run(RoleWishes.Reset);
+        Safe.Run(RoleShuffle.Reset);
         Safe.Run(GameRecorder.OnExitGame); // nur für den Freeplay-Test (Config: Debug.RecordFreeplay)
     }
 }
@@ -102,20 +104,72 @@ internal static class BeginGamePatch
     public static void Postfix() => Safe.Run(RoleWishes.OnStartPressed);
 }
 
-[HarmonyPatch(typeof(LogicRoleSelectionNormal), nameof(LogicRoleSelectionNormal.AssignRolesForTeam))]
-internal static class AssignRolesForTeamPatch
-{
-    // Spielerliste mischen, bevor das Spiel daraus die Rollen zieht (Config [Rollen] SelbstWuerfeln)
-    public static void Prefix(Il2CppSystem.Collections.Generic.List<NetworkedPlayerInfo> players, RoleTeamTypes team)
-        => Safe.Run(() => RoleShuffle.BeforeAssignTeam(players, team));
-}
-
 [HarmonyPatch(typeof(RoleManager), nameof(RoleManager.SelectRoles))]
 internal static class SelectRolesPatch
 {
-    public static void Prefix() => Safe.Run(RoleWishes.BeforeSelectRoles);
+    public static void Prefix()
+    {
+        Safe.Run(RoleShuffle.BeforeSelectRoles);
+        Safe.Run(RoleWishes.BeforeSelectRoles);
+    }
 
-    public static void Postfix() => Safe.Run(RoleWishes.AfterSelectRoles);
+    public static void Postfix()
+    {
+        Safe.Run(RoleShuffle.AfterSelectRoles); // erst die eigenen Würfel abschalten
+        Safe.Run(RoleWishes.AfterSelectRoles);
+    }
+}
+
+// Rollen selbst würfeln: während SelectRoles die Würfelergebnisse des Spiels ersetzen (RoleShuffle).
+// Nur einfache statische int-Methoden patchen – Patches auf Methoden mit Nullable-/Il2Cpp-Listen-Parametern
+// haben in 1.3.3 die .NET-Laufzeit abstürzen lassen.
+
+[HarmonyPatch(typeof(HashRandom), nameof(HashRandom.FastNext), typeof(int))]
+internal static class HashRandomFastNextPatch
+{
+    public static void Postfix(int maxInt, ref int __result)
+    {
+        try
+        {
+            RoleShuffle.Replace(maxInt, ref __result);
+        }
+        catch
+        {
+            // Ergebnis des Spiels bleibt
+        }
+    }
+}
+
+[HarmonyPatch(typeof(HashRandom), nameof(HashRandom.Next), typeof(int))]
+internal static class HashRandomNextPatch
+{
+    public static void Postfix(int maxInt, ref int __result)
+    {
+        try
+        {
+            RoleShuffle.Replace(maxInt, ref __result);
+        }
+        catch
+        {
+            // Ergebnis des Spiels bleibt
+        }
+    }
+}
+
+[HarmonyPatch(typeof(HashRandom), nameof(HashRandom.Next), typeof(int), typeof(int))]
+internal static class HashRandomNextRangePatch
+{
+    public static void Postfix(int minInt, int maxInt, ref int __result)
+    {
+        try
+        {
+            RoleShuffle.Replace(minInt, maxInt, ref __result);
+        }
+        catch
+        {
+            // Ergebnis des Spiels bleibt
+        }
+    }
 }
 
 [HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.RpcSetRole))]
