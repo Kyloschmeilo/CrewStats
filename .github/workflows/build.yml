@@ -1,0 +1,24 @@
+# Baut die Mod bei jedem Push und lässt die Tests laufen. Die fertige DLL liegt unter Actions → Lauf → Artifacts.
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Tests (Rundenregeln)
+        run: dotnet test Tests
+      - name: Mod bauen
+        run: dotnet build CrewStats -c Release -p:AmongUs=/nicht-kopieren
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrewStats-dll
+          path: CrewStats/bin/Release/net6.0/CrewStats.dll

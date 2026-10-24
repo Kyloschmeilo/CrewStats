@@ -10,7 +10,8 @@ namespace CrewStats;
 // Ausnahmen: die zusätzlichen Schalter im Einstellungsmenü, die optionale Hausregel
 // „Kein Skip bei Notfall“ (CastVote-Prefix, nur als Host und nur wenn eingeschaltet) und die
 // Rollenvergabe (nur als Host: eigene Würfel per HashRandom-Postfix während SelectRoles; Rollenwünsche aus Discord
-// per RpcSetRole-Prefix, nur wenn es Wünsche gibt).
+// per RpcSetRole-Prefix, nur wenn es Wünsche gibt). Mit The Other Roles liest die Mod zusätzlich (per Reflection,
+// siehe TorBridge) Rollen, Gewinner, Tode und wer im Meeting stumm ist.
 // Jeder Patch fängt eigene Fehler ab, damit die Mod das Spiel niemals stören kann.
 
 [HarmonyPatch(typeof(IntroCutscene), nameof(IntroCutscene.CoBegin))]
@@ -73,13 +74,26 @@ internal static class VotingCompletePatch
 [HarmonyPatch(typeof(AmongUsClient), nameof(AmongUsClient.OnGameEnd))]
 internal static class GameEndPatch
 {
-    // Prefix: zu diesem Zeitpunkt existieren die Spielerdaten noch
+    private static int _rawReason;
+
+    // Prefix: zu diesem Zeitpunkt existieren die Spielerdaten noch. Als Erstes, damit der Grund noch nicht von
+    // The Other Roles ersetzt ist (TOR macht aus eigenen Spielenden wie „Jester gewinnt“ ImpostorsByKill).
+    [HarmonyPriority(Priority.First)]
     public static void Prefix(EndGameResult endGameResult)
     {
         Safe.Run(AutoMute.Stop);
         Safe.Run(RoleWishes.Reset);
         Safe.Run(RoleShuffle.Reset);
-        Safe.Run(() => GameRecorder.OnGameEnd(endGameResult.GameOverReason));
+        _rawReason = (int)endGameResult.GameOverReason;
+        if (!GameRecorder.IsTorRound) Safe.Run(() => GameRecorder.OnGameEnd(endGameResult.GameOverReason));
+    }
+
+    // Mit The Other Roles erst nach TORs Postfix: dann stehen die echten Gewinner in EndGameResult.CachedWinners
+    [HarmonyPriority(Priority.Last)]
+    [HarmonyAfter(TorBridge.PluginId)]
+    public static void Postfix()
+    {
+        if (GameRecorder.IsTorRound) Safe.Run(() => GameRecorder.OnGameEndTor(_rawReason));
     }
 }
 
@@ -113,6 +127,10 @@ internal static class SelectRolesPatch
         Safe.Run(RoleWishes.BeforeSelectRoles);
     }
 
+    // Als Erstes: die zurückgehaltenen Spiel-Rollen (Rollenwünsche) müssen verteilt sein, bevor The Other Roles
+    // in seinem SelectRoles-Postfix anhand von Impostor/Crewmate seine Rollen vergibt.
+    [HarmonyPriority(Priority.First)]
+    [HarmonyBefore(TorBridge.PluginId)]
     public static void Postfix()
     {
         Safe.Run(RoleShuffle.AfterSelectRoles); // erst die eigenen Würfel abschalten

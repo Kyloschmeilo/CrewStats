@@ -15,10 +15,12 @@ public sealed class RoundRecord
     public DateTime EndedAt { get; set; }
     public double DurationSeconds { get; set; }
     public string EndReason { get; set; } = "";
-    public string WinningTeam { get; set; } = "UNKNOWN"; // CREW | IMPOSTOR | UNKNOWN
+    public string WinningTeam { get; set; } = "UNKNOWN"; // CREW | IMPOSTOR | UNKNOWN, mit The Other Roles auch NEUTRAL (Sondersieg)
+    public string? Mod { get; set; } // Rollen-Mod, z.B. "TheOtherRoles GMIA 1.4.1" – null ohne
     public List<PlayerRecord> Players { get; set; } = new();
     public List<KillRecord> Kills { get; set; } = new();
     public List<MeetingRecord> Meetings { get; set; } = new();
+    public List<DeathRecord> ModDeaths { get; set; } = new(); // nur mit The Other Roles: alle Tode laut TOR
 
     public PlayerRecord GetOrAddPlayer(byte playerId)
     {
@@ -40,12 +42,15 @@ public sealed class PlayerRecord
     public string Name { get; set; } = "";
     public string FriendCode { get; set; } = "";
     public string Puid { get; set; } = "";
-    public string Role { get; set; } = "";
-    public string Team { get; set; } = ""; // CREW | IMPOSTOR
+    public string Role { get; set; } = ""; // Rolle des Spiels (RoleTypes)
+    public string Team { get; set; } = ""; // CREW | IMPOSTOR, mit The Other Roles auch NEUTRAL
+    public string? ModRole { get; set; } // The Other Roles: Rolle am Spielende (nameKey, z.B. "sheriff")
+    public string? ModStartRole { get; set; } // The Other Roles: Rolle beim Start, falls sie sich geändert hat
+    public List<string>? Modifiers { get; set; } // The Other Roles: Modifikatoren (z.B. "lover", "mini", "madmate")
     public bool Won { get; set; }
     public bool IsDead { get; set; }
     public bool Disconnected { get; set; }
-    public string? DeathCause { get; set; } // kill | ejected | disconnect
+    public string? DeathCause { get; set; } // kill | ejected | disconnect | suicide, mit TOR auch guess, jailed …
     public byte? KilledBy { get; set; }
     public double? DiedAtSeconds { get; set; }
     public int Kills { get; set; }
@@ -74,4 +79,13 @@ public sealed class VoteRecord
 {
     public byte Voter { get; set; }
     public byte? Target { get; set; } // null = übersprungen / nicht abgestimmt
+}
+
+/// <summary>Ein Tod laut The Other Roles (Reason = CustomDeathReason: Kill, Exile, Guess, Jailed, Suicide …).</summary>
+public sealed class DeathRecord
+{
+    public double AtSeconds { get; set; }
+    public byte Victim { get; set; }
+    public byte? Killer { get; set; }
+    public string Reason { get; set; } = "";
 }

@@ -21,6 +21,9 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam**, die mit unserem Discord-B
 - 🎲 **Rollen selbst gewürfelt** (nur als Host) – die Mod verteilt mit echtem Zufall, wer welche Rolle bekommt;
   jeder hat in jeder Runde dieselbe Chance. Welche Rollen es gibt, bestimmen die Lobby-Einstellungen.
   Abschalten: `SelbstWuerfeln = false` im Abschnitt `[Rollen]` der Config.
+- 🎭 **The Other Roles** – spielt ihr mit der Rollen-Mod The Other Roles (GMIA), schickt die Mod auch die
+  TOR-Rollen, die echten Gewinner (Jester, Jackal, Liebespaar …) und Guesser-/Jailor-/Sheriff-Abschüsse an den Bot.
+  Beim Auto-Mute bleiben Erpresste (Blackmailer) und Eingesperrte (Jailor) im Meeting auch im Discord stumm.
 - 🏅 Aus den Runden berechnet der Bot außerdem **Highlights**, **Erfolge** (`/erfolge`),
   **Rivalen** (`/stats`) und einen **Spieleabend-Recap** (`/recap`).
 
@@ -52,5 +55,6 @@ Installer nochmal starten → **[2] Deinstallieren**. Danach startet Among Us wi
 
 ## Für Entwickler
 
-Quellcode in `CrewStats/`, Installer in `installer/`. Neue Version veröffentlichen:
+Quellcode in `CrewStats/`, Installer in `installer/`, Tests der Rundenregeln in `Tests/` (`dotnet test Tests`,
+laufen ohne Among Us; GitHub baut die Mod bei jedem Push, Workflow „Build“). Neue Version veröffentlichen:
 Version in `CrewStats/CrewStats.csproj` erhöhen, dann `.\release.ps1 "Was ist neu"`.
