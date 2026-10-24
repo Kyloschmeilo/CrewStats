@@ -234,6 +234,7 @@ internal static class VersionShowerPatch
     // Hinweis unter der Versionsnummer im Hauptmenü, wenn ein Update installiert wurde
     public static void Postfix(VersionShower __instance) => Safe.Run(() =>
     {
+        TorPacketFix.TryApply();
         if (Updater.Notice != null && __instance.text != null)
             __instance.text.text += $"\n<color=#FFD54F>{Updater.Notice}</color>";
     });
