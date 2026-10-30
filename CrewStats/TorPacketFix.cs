@@ -13,13 +13,13 @@ namespace CrewStats;
 /// (<c>CustomOption.ShareOptionSelections</c>) – bis zu 200 Optionen und alle Rollen-Filter (Guesser-Rollenlisten) in
 /// je EINEM Paket. Das Filter-Paket ist ~1635 Bytes groß, also größer als ein UDP-Paket (~1500) übers Internet; kommt
 /// es nicht an, trennt der Server den Host nach 7,5 s („Reliable packet … was not ack'd“, gesehen am 24.10.2026).
-/// Hier werden dieselben Daten in kleinen Paketen geschickt (40 Optionen bzw. ein Filter je Paket) – TORs Empfänger
+/// Hier werden dieselben Daten in kleinen Paketen geschickt (Optionen wie bei TOR, aber ein Filter je Paket) – TORs Empfänger
 /// liest die Anzahl aus jedem Paket, das Format bleibt gleich, andere Spieler brauchen den Fix nicht.
 /// Fehlt etwas (andere TOR-Version), läuft TORs eigenes Senden wie bisher.
 /// </summary>
 internal static class TorPacketFix
 {
-    private const int OptionsPerPacket = 40;
+    private const int OptionsPerPacket = 200; // wie TOR – ~3 Bytes je Option, nur die Filter waren zu groß
     private const BindingFlags Static = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
     private const BindingFlags Instance = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
