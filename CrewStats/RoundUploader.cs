@@ -18,10 +18,10 @@ internal static class RoundUploader
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(20) };
     private static readonly SemaphoreSlim SendLock = new(1, 1);
+    // Kompakt (ohne Einrückung): mit Zeitleiste und Laufwegen ist eine Runde sonst schnell mehrere MB groß
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
     };
 
     private static string PendingDirectory => Path.Combine(CrewStatsPlugin.DataDirectory, "pending");
@@ -31,8 +31,18 @@ internal static class RoundUploader
     {
         Directory.CreateDirectory(PendingDirectory);
         var file = Path.Combine(PendingDirectory, $"{round.StartedAt:yyyyMMdd-HHmmss}-{round.GameId}.json");
-        File.WriteAllText(file, JsonSerializer.Serialize(round, JsonOptions));
+        File.WriteAllBytes(file, Serialize(round));
         Task.Run(FlushPendingAsync); // im Hintergrund – das Spiel ruckelt nicht
+    }
+
+    /// <summary>JSON der Runde; wird es für den Discord-Webhook zu groß, ohne Laufwege.</summary>
+    internal static byte[] Serialize(RoundRecord round)
+    {
+        var json = JsonSerializer.SerializeToUtf8Bytes(round, JsonOptions);
+        if (json.Length <= RoundStats.MaxBytesWithTracks || round.Tracks.Count == 0) return json;
+        CrewStatsPlugin.Logger.LogWarning($"Rundendaten sind {json.Length / 1024} KB groß – Laufwege werden weggelassen.");
+        round.Tracks = new();
+        return JsonSerializer.SerializeToUtf8Bytes(round, JsonOptions);
     }
 
     /// <summary>Die Webhook-URL aus der Config, oder null, wenn keine gültige eingetragen ist.</summary>

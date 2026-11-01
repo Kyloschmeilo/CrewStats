@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <!-- Tests für die spielunabhängigen Regeln (CrewStats/RoundRules.cs) – laufen ohne Among Us und ohne BepInEx -->
+    <!-- Tests für die spielunabhängigen Regeln (RoundRules, RoundStats, Rundenformat) – laufen ohne Among Us und ohne BepInEx -->
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <Nullable>enable</Nullable>
@@ -10,6 +10,9 @@
 
     <ItemGroup>
         <Compile Include="../CrewStats/RoundRules.cs" Link="RoundRules.cs" />
+        <Compile Include="../CrewStats/RoundRecord.cs" Link="RoundRecord.cs" />
+        <Compile Include="../CrewStats/RoundStats.cs" Link="RoundStats.cs" />
+        <None Include="../docs/beispiel-runde.json" Link="beispiel-runde.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>

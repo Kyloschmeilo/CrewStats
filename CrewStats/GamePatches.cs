@@ -1,6 +1,7 @@
 using System;
 using AmongUs.GameOptions;
 using HarmonyLib;
+using Hazel;
 using InnerNet;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 
@@ -52,15 +53,18 @@ internal static class CastVotePatch
     // false = Original überspringen (Stimme zählt nicht). Bei einem Fehler zählt die Stimme normal.
     public static bool Prefix(MeetingHud __instance, PlayerId srcPlayerId, PlayerId suspectPlayerId)
     {
+        bool allowed;
         try
         {
-            return NoSkipRule.AllowVote(__instance, srcPlayerId, suspectPlayerId);
+            allowed = NoSkipRule.AllowVote(__instance, srcPlayerId, suspectPlayerId);
         }
         catch (Exception exc)
         {
             CrewStatsPlugin.Logger.LogError($"Kein-Skip-Regel-Fehler (Stimme zählt normal): {exc}");
-            return true;
+            allowed = true;
         }
+        if (allowed) Safe.Run(() => GameRecorder.OnVoteCast(srcPlayerId.Value, suspectPlayerId.Value));
+        return allowed;
     }
 }
 
@@ -208,6 +212,39 @@ internal static class RpcSetRolePatch
     }
 }
 
+// ---------- ausführliche Rundendaten (nur lesen, nur beim aufzeichnenden Host) ----------
+
+[HarmonyPatch(typeof(ShipStatus), nameof(ShipStatus.UpdateSystem), typeof(SystemTypes), typeof(PlayerControl), typeof(byte))]
+internal static class UpdateSystemBytePatch
+{
+    public static void Prefix(SystemTypes systemType, PlayerControl player) => Safe.Run(() => GameRecorder.OnSystemUsed(systemType, player));
+}
+
+[HarmonyPatch(typeof(ShipStatus), nameof(ShipStatus.UpdateSystem), typeof(SystemTypes), typeof(PlayerControl), typeof(MessageReader))]
+internal static class UpdateSystemReaderPatch
+{
+    public static void Prefix(SystemTypes systemType, PlayerControl player) => Safe.Run(() => GameRecorder.OnSystemUsed(systemType, player));
+}
+
+[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.Shapeshift))]
+internal static class ShapeshiftPatch
+{
+    public static void Postfix(PlayerControl __instance, PlayerControl targetPlayer) =>
+        Safe.Run(() => GameRecorder.OnShapeshift(__instance, targetPlayer));
+}
+
+[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.ProtectPlayer))]
+internal static class ProtectPlayerPatch
+{
+    public static void Postfix(PlayerControl __instance, PlayerControl target) => Safe.Run(() => GameRecorder.OnProtect(__instance, target));
+}
+
+[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.Revive))]
+internal static class RevivePatch
+{
+    public static void Postfix(PlayerControl __instance) => Safe.Run(() => GameRecorder.OnRevive(__instance));
+}
+
 // ---------- Auto-Mute ----------
 
 [HarmonyPatch(typeof(HudManager), nameof(HudManager.Update))]
@@ -217,6 +254,7 @@ internal static class HudUpdatePatch
     {
         AutoMute.Tick(); // alle fangen eigene Fehler ab
         LobbyReporter.Tick();
+        Safe.Run(GameRecorder.Tick);
     }
 }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using AmongUs.GameOptions;
@@ -20,6 +21,48 @@ internal static class SettingsReporter
     private static readonly RoleTypes[] SkippedRoles =
         { RoleTypes.Crewmate, RoleTypes.Impostor, RoleTypes.CrewmateGhost, RoleTypes.ImpostorGhost };
 
+    /// <summary>Alle Lobby-Optionen (auch für die Rundendaten, siehe GameRecorder). Läuft auf dem Spiel-Thread.</summary>
+    public static RoundSettings Capture(IGameOptions options)
+    {
+        var settings = new RoundSettings { MaxPlayers = options.MaxPlayers, NumImpostors = options.NumImpostors };
+        foreach (Int32OptionNames name in Enum.GetValues(typeof(Int32OptionNames)))
+        {
+            int value = 0;
+            if (name != Int32OptionNames.Invalid && Try(() => options.TryGetInt(name, out value))) settings.Ints[name.ToString()] = value;
+        }
+
+        foreach (FloatOptionNames name in Enum.GetValues(typeof(FloatOptionNames)))
+        {
+            float value = 0;
+            if (name != FloatOptionNames.Invalid && Try(() => options.TryGetFloat(name, out value)))
+                settings.Floats[name.ToString()] = (float)Math.Round(value, 3);
+        }
+
+        foreach (BoolOptionNames name in Enum.GetValues(typeof(BoolOptionNames)))
+        {
+            bool value = false;
+            if (name != BoolOptionNames.Invalid && Try(() => options.TryGetBool(name, out value))) settings.Bools[name.ToString()] = value;
+        }
+
+        foreach (RoleTypes role in Enum.GetValues(typeof(RoleTypes)))
+        {
+            if (Array.IndexOf(SkippedRoles, role) >= 0) continue;
+            try
+            {
+                settings.Roles[role.ToString()] = new RoleSetting
+                {
+                    Count = options.RoleOptions.GetNumPerGame(role),
+                    Chance = options.RoleOptions.GetChancePerGame(role),
+                };
+            }
+            catch
+            {
+                // Rolle kennt die Options-Version nicht – einfach weglassen
+            }
+        }
+        return settings;
+    }
+
     // Läuft auf dem Spiel-Thread: hier alles lesen, gesendet wird im Hintergrund
     public static void OnGameStart()
     {
@@ -30,46 +73,7 @@ internal static class SettingsReporter
         var options = GameOptionsManager.Instance?.CurrentGameOptions;
         if (options == null || options.GameMode is not (GameModes.Normal or GameModes.NormalFools)) return;
 
-        var ints = new Dictionary<string, int>();
-        foreach (Int32OptionNames name in Enum.GetValues(typeof(Int32OptionNames)))
-        {
-            int value = 0;
-            if (name != Int32OptionNames.Invalid && Try(() => options.TryGetInt(name, out value))) ints[name.ToString()] = value;
-        }
-
-        var floats = new Dictionary<string, float>();
-        foreach (FloatOptionNames name in Enum.GetValues(typeof(FloatOptionNames)))
-        {
-            float value = 0;
-            if (name != FloatOptionNames.Invalid && Try(() => options.TryGetFloat(name, out value)))
-                floats[name.ToString()] = (float)Math.Round(value, 3);
-        }
-
-        var bools = new Dictionary<string, bool>();
-        foreach (BoolOptionNames name in Enum.GetValues(typeof(BoolOptionNames)))
-        {
-            bool value = false;
-            if (name != BoolOptionNames.Invalid && Try(() => options.TryGetBool(name, out value))) bools[name.ToString()] = value;
-        }
-
-        var roles = new Dictionary<string, object>();
-        foreach (RoleTypes role in Enum.GetValues(typeof(RoleTypes)))
-        {
-            if (Array.IndexOf(SkippedRoles, role) >= 0) continue;
-            try
-            {
-                roles[role.ToString()] = new
-                {
-                    count = options.RoleOptions.GetNumPerGame(role),
-                    chance = options.RoleOptions.GetChancePerGame(role),
-                };
-            }
-            catch
-            {
-                // Rolle kennt die Options-Version nicht – einfach weglassen
-            }
-        }
-
+        var settings = Capture(options);
         var json = JsonSerializer.SerializeToUtf8Bytes(new
         {
             crewstats = "settings",
@@ -78,12 +82,12 @@ internal static class SettingsReporter
             lobbyCode = client.NetworkMode == NetworkModes.FreePlay ? "FREEPLAY" : GameCode.IntToGameName(client.GameId) ?? "",
             map = GameRecorder.MapName(options.MapId),
             players = GameData.Instance != null ? GameData.Instance.PlayerCount : 0,
-            maxPlayers = options.MaxPlayers,
-            numImpostors = options.NumImpostors,
-            ints,
-            floats,
-            bools,
-            roles,
+            maxPlayers = settings.MaxPlayers,
+            numImpostors = settings.NumImpostors,
+            ints = settings.Ints,
+            floats = settings.Floats,
+            bools = settings.Bools,
+            roles = settings.Roles.ToDictionary(r => r.Key, r => new { count = r.Value.Count, chance = r.Value.Chance }),
         });
 
         var url = RoundUploader.WebhookUrl;

@@ -1,0 +1,111 @@
+{
+  "version": 2,
+  "gameId": "4f1c2b8e9d0a4c7f8e1b2a3c4d5e6f70",
+  "lobbyCode": "ABCDEF",
+  "map": "The Skeld",
+  "startedAt": "2026-11-01T19:00:00Z",
+  "endedAt": "2026-11-01T19:06:40Z",
+  "durationSeconds": 400,
+  "endReason": "CrewmatesByVote",
+  "winningTeam": "CREW",
+  "mod": "TheOtherRoles GMIA 1.4.1",
+  "players": [
+    {
+      "playerId": 0, "name": "Kilian", "friendCode": "kilian#1234", "puid": "p0", "role": "Crewmate", "team": "CREW",
+      "modRole": "sheriff", "modStartRole": null, "modifiers": [], "won": true, "isDead": false, "disconnected": false,
+      "deathCause": null, "killedBy": null, "diedAtSeconds": null, "kills": 0, "tasksTotal": 2, "tasksCompleted": 2,
+      "endRole": null, "isHost": true, "colorId": 0, "color": "Red", "hat": "hat_pk05_Cheese", "skin": null, "visor": null,
+      "pet": null, "namePlate": null, "level": 42, "platform": "StandaloneSteamPC", "disconnectedAtSeconds": null,
+      "tasks": [
+        { "id": 0, "type": "FixWiring", "completed": true, "completedAtSeconds": 30.4 },
+        { "id": 1, "type": "SwipeCard", "completed": true, "completedAtSeconds": 95.0 }
+      ],
+      "summary": null
+    },
+    {
+      "playerId": 1, "name": "Mia", "friendCode": "mia#5678", "puid": "p1", "role": "Impostor", "team": "IMPOSTOR",
+      "modRole": "impostor", "modStartRole": null, "modifiers": [], "won": false, "isDead": true, "disconnected": false,
+      "deathCause": "ejected", "killedBy": null, "diedAtSeconds": 260.0, "kills": 1, "tasksTotal": 0, "tasksCompleted": 0,
+      "endRole": "ImpostorGhost", "isHost": false, "colorId": 1, "color": "Blue", "hat": null, "skin": null, "visor": null,
+      "pet": null, "namePlate": null, "level": 7, "platform": "Android", "disconnectedAtSeconds": null, "tasks": null,
+      "summary": null
+    },
+    {
+      "playerId": 2, "name": "Tom", "friendCode": "tom#9012", "puid": "p2", "role": "Crewmate", "team": "CREW",
+      "modRole": "crewmate", "modStartRole": null, "modifiers": ["lover"], "won": true, "isDead": true, "disconnected": false,
+      "deathCause": "kill", "killedBy": 1, "diedAtSeconds": 120.5, "kills": 0, "tasksTotal": 2, "tasksCompleted": 1,
+      "endRole": "CrewmateGhost", "isHost": false, "colorId": 2, "color": "Green", "hat": null, "skin": null, "visor": null,
+      "pet": null, "namePlate": null, "level": 3, "platform": "StandaloneSteamPC", "disconnectedAtSeconds": null,
+      "tasks": [
+        { "id": 0, "type": "EmptyGarbage", "completed": true, "completedAtSeconds": 50.2 },
+        { "id": 1, "type": "PrimeShields", "completed": false, "completedAtSeconds": null }
+      ],
+      "summary": null
+    }
+  ],
+  "kills": [
+    { "atSeconds": 120.5, "killer": 1, "victim": 2, "x": -8.5, "y": -4.2, "room": "Electrical", "killerRole": "impostor", "victimRole": "crewmate" }
+  ],
+  "meetings": [
+    {
+      "atSeconds": 140.0, "caller": 0, "body": 2, "exiled": null, "tie": false, "endedAtSeconds": 200.0,
+      "callerX": -7.9, "callerY": -4.0, "callerRoom": "Electrical", "bodyRoom": "Electrical", "alive": [0, 1],
+      "votes": [
+        { "voter": 0, "target": null, "skipped": true, "atSeconds": 180.0 },
+        { "voter": 1, "target": null, "skipped": false, "atSeconds": null }
+      ]
+    },
+    {
+      "atSeconds": 230.0, "caller": 0, "body": null, "exiled": 1, "tie": false, "endedAtSeconds": 260.0,
+      "callerX": -1.0, "callerY": 1.5, "callerRoom": "Cafeteria", "bodyRoom": null, "alive": [0, 1],
+      "votes": [
+        { "voter": 0, "target": 1, "skipped": null, "atSeconds": 250.0 },
+        { "voter": 1, "target": 0, "skipped": null, "atSeconds": 255.0 }
+      ]
+    }
+  ],
+  "modDeaths": [
+    { "atSeconds": 120.5, "victim": 2, "killer": 1, "reason": "Kill" },
+    { "atSeconds": 260.0, "victim": 1, "killer": null, "reason": "Exile" }
+  ],
+  "mapId": 0,
+  "crewStatsVersion": "1.5.0",
+  "gameVersion": "2026.9.29",
+  "server": "Modded NA",
+  "gameMode": "Normal",
+  "modGameMode": "Classic",
+  "endedBy": "game",
+  "hostPlayerId": 0,
+  "settings": {
+    "maxPlayers": 15, "numImpostors": 1,
+    "ints": { "NumEmergencyMeetings": 1, "EmergencyCooldown": 15, "DiscussionTime": 15, "VotingTime": 120 },
+    "floats": { "KillCooldown": 25, "PlayerSpeedMod": 1.25 },
+    "bools": { "ConfirmImpostor": true, "AnonymousVotes": false },
+    "roles": { "Engineer": { "count": 1, "chance": 50 } }
+  },
+  "modSettings": { "Sheriff": "100%", "Sheriff Cooldown": "30s" },
+  "events": [
+    { "atSeconds": 30.4, "type": "task", "player": 0, "task": "FixWiring", "x": -9.1, "y": -5.0, "room": "Electrical" },
+    { "atSeconds": 45.0, "type": "ventEnter", "player": 1, "vent": 3, "x": -9.0, "y": -4.5, "room": "Electrical" },
+    { "atSeconds": 48.0, "type": "ventExit", "player": 1, "vent": 4, "x": -17.0, "y": -13.0, "room": "LowerEngine" },
+    { "atSeconds": 50.2, "type": "task", "player": 2, "task": "EmptyGarbage", "x": -1.0, "y": 5.0, "room": "Cafeteria" },
+    { "atSeconds": 60.0, "type": "sabotage", "player": 1, "system": "Lights" },
+    { "atSeconds": 75.5, "type": "repair", "player": 0, "system": "Lights" },
+    { "atSeconds": 75.5, "type": "sabotageEnd", "system": "Lights", "reason": "fixed", "durationSeconds": 15.5 },
+    { "atSeconds": 90.0, "type": "doors", "player": 1, "room": "MedBay" },
+    { "atSeconds": 95.0, "type": "task", "player": 0, "task": "SwipeCard", "x": 5.0, "y": -6.0, "room": "Admin" },
+    { "atSeconds": 120.5, "type": "kill", "player": 1, "target": 2, "x": -8.5, "y": -4.2, "room": "Electrical", "role": "impostor" },
+    { "atSeconds": 140.0, "type": "meeting", "player": 0, "target": 2, "x": -7.9, "y": -4.0, "room": "Electrical", "reason": "report" },
+    { "atSeconds": 180.0, "type": "vote", "player": 0, "skipped": true },
+    { "atSeconds": 200.0, "type": "exile", "tie": false },
+    { "atSeconds": 230.0, "type": "meeting", "player": 0, "x": -1.0, "y": 1.5, "room": "Cafeteria", "reason": "emergency" },
+    { "atSeconds": 250.0, "type": "vote", "player": 0, "target": 1 },
+    { "atSeconds": 255.0, "type": "vote", "player": 1, "target": 0 },
+    { "atSeconds": 260.0, "type": "exile", "target": 1, "tie": false }
+  ],
+  "tracks": [
+    { "player": 0, "points": [0, -1, 1, 1, 0, 1, 2, 1, 1, 3, 2, 1] },
+    { "player": 1, "points": [0, -1, 1, 1, -2, 1, 2, 20, 20] }
+  ],
+  "trackIntervalSeconds": 1
+}

@@ -190,6 +190,34 @@ internal static class TorBridge
         return result;
     }) ?? new HashSet<byte>();
 
+    /// <summary>
+    /// Alle TOR-Einstellungen der Lobby: Name (TOR-Schlüssel, ohne Farb-Tags) → gewählter Wert als Text. Bei doppelten
+    /// Namen hängt die Option-Id dran. null, wenn nicht lesbar.
+    /// </summary>
+    public static Dictionary<string, string>? Options() => Try("Einstellungen", () =>
+    {
+        var option = TorType("TheOtherRoles.CustomOption");
+        if (option?.GetField("options", Static)?.GetValue(null) is not IEnumerable list) return null;
+        var id = option.GetField("id", Instance)!;
+        var name = option.GetField("name", Instance)!;
+        var selections = option.GetField("selections", Instance)!;
+        var selection = option.GetField("selection", Instance)!;
+
+        var result = new Dictionary<string, string>();
+        foreach (var entry in list)
+        {
+            if (entry == null) continue;
+            var key = RoundStats.StripTags(name.GetValue(entry) as string ?? "");
+            if (key.Length == 0) key = $"option{id.GetValue(entry)}";
+            if (result.ContainsKey(key)) key = $"{key}#{id.GetValue(entry)}";
+            var index = (int)selection.GetValue(entry)!;
+            var values = selections.GetValue(entry) as object[];
+            var value = values != null && index >= 0 && index < values.Length ? values[index]?.ToString() ?? "" : index.ToString();
+            result[key] = RoundStats.StripTags(value);
+        }
+        return result;
+    });
+
     // ---------- intern ----------
 
     private static Type? TorType(string name) => TorAssembly?.GetType(name);
