@@ -25,12 +25,19 @@ namespace CrewStats;
 ///      <see cref="RoleWishPlanner"/> getauscht und erst danach an alle verschickt. Anzahl Impostor und
 ///      Spezialrollen bleiben wie eingestellt.
 ///   4. Rückmeldung an den Bot: erfüllt / nicht möglich (XP zurück) / nicht dabei (Wunsch bleibt offen).
+/// Wünsche auf Rollen von The Other Roles (Rollenname "tor:…") legen hier nur das Team fest, die Rolle selbst
+/// verteilt danach TOR – siehe <see cref="TorRoleWishes"/>.
 /// Ohne Wünsche hält die Mod keine Rollen zurück. Ins Log kommen nur Anzahlen, keine Rollen.
 /// Protokoll ↔ Bot: services/RoleWishes.kt (beide Seiten gemeinsam ändern!).
 /// </summary>
 internal static class RoleWishes
 {
-    private sealed record Wish(long Id, string FriendCode, string RoleName, bool Admin);
+    /// <param name="TorRoles">Nur bei TOR-Wünschen: passende TOR-RoleId-Namen (z.B. NiceGuesser, EvilGuesser).</param>
+    /// <param name="Team">Nur bei TOR-Wünschen: CREW (auch Neutrale), IMPOSTOR oder ANY (Nice/Evil-Rollen).</param>
+    private sealed record Wish(long Id, string FriendCode, string RoleName, bool Admin, string[] TorRoles, string Team)
+    {
+        public bool IsTor => RoleName.StartsWith("tor:", StringComparison.Ordinal);
+    }
 
     private sealed record Captured(PlayerControl Player, RoleTypes Role, bool CanOverride);
 
@@ -176,11 +183,16 @@ internal static class RoleWishes
         using var document = JsonDocument.Parse(json);
         foreach (var item in document.RootElement.GetProperty("wishes").EnumerateArray())
         {
+            var torRoles = item.TryGetProperty("tor", out var tor) && tor.ValueKind == JsonValueKind.Array
+                ? tor.EnumerateArray().Select(r => r.GetString() ?? "").Where(r => r.Length > 0).ToArray()
+                : Array.Empty<string>();
             wishes.Add(new Wish(
                 item.GetProperty("id").GetInt64(),
                 Normalize(item.GetProperty("fc").GetString()),
                 item.GetProperty("role").GetString() ?? "",
-                item.TryGetProperty("admin", out var admin) && admin.GetBoolean()));
+                item.TryGetProperty("admin", out var admin) && admin.GetBoolean(),
+                torRoles,
+                item.TryGetProperty("team", out var team) ? team.GetString() ?? "ANY" : "ANY"));
         }
         return wishes;
     }
@@ -259,15 +271,17 @@ internal static class RoleWishes
 
         var roles = captured.Select(c => c.Role).ToArray();
         List<object> results;
+        var torWishes = new List<TorWishPicker.Wish>();
         try
         {
-            results = Plan(captured, wishes, roles);
+            results = Plan(captured, wishes, roles, torWishes);
         }
         catch (Exception exc)
         {
             CrewStatsPlugin.Logger.LogError($"Rollenwünsche: Fehler – Runde läuft mit den gewürfelten Rollen: {exc}");
             roles = captured.Select(c => c.Role).ToArray();
             results = wishes.Select(w => Result(w.Id, "absent")).ToList();
+            torWishes.Clear();
         }
         finally
         {
@@ -286,10 +300,23 @@ internal static class RoleWishes
         }
 
         ReportResults(results);
+        TorRoleWishes.Begin(torWishes); // TOR verteilt seine Rollen gleich danach in seinem Postfix
+    }
+
+    /// <summary>RoleManager.SelectRoles (Postfix nach The Other Roles): Rückmeldung zu den TOR-Wünschen.</summary>
+    public static void AfterTorRoles()
+    {
+        var outcomes = TorRoleWishes.Finish();
+        if (outcomes.Count == 0) return;
+        foreach (var (id, applied) in outcomes)
+        {
+            if (applied) AppliedIds.Add(id);
+        }
+        ReportResults(outcomes.Select(o => o.Applied ? Result(o.Id, "applied") : Result(o.Id, "failed", "noSlot")).ToList());
     }
 
     /// <summary>Schreibt die neuen Rollen in <paramref name="roles"/> und liefert die Rückmeldung für den Bot.</summary>
-    private static List<object> Plan(List<Captured> captured, List<Wish> wishes, RoleTypes[] roles)
+    private static List<object> Plan(List<Captured> captured, List<Wish> wishes, RoleTypes[] roles, List<TorWishPicker.Wish> torWishes)
     {
         if (captured.Count == 0)
         {
@@ -320,6 +347,38 @@ internal static class RoleWishes
             {
                 results.Add(Result(wish.Id, "absent"));
                 absent++;
+                continue;
+            }
+            if (wish.IsTor)
+            {
+                if (wish.TorRoles.Length == 0)
+                {
+                    results.Add(Result(wish.Id, "failed", "unknownRole"));
+                    failed++;
+                    continue;
+                }
+                if (!TorRoleWishes.Available)
+                {
+                    results.Add(Result(wish.Id, "failed", "disabled")); // ohne The Other Roles (oder andere TOR-Version)
+                    failed++;
+                    continue;
+                }
+                // Erst das Team festlegen (Crew-/Neutral-Rollen vergibt TOR an Crewmates, Impostor-Rollen an Impostor)
+                var outcome = wish.Team switch
+                {
+                    "CREW" => planner.Apply(playerId, (int)RoleTypes.Crewmate),
+                    "IMPOSTOR" => planner.Apply(playerId, (int)RoleTypes.Impostor),
+                    _ => RoleWishPlanner.Outcome.Applied,
+                };
+                if (outcome == RoleWishPlanner.Outcome.Applied)
+                {
+                    torWishes.Add(new TorWishPicker.Wish(wish.Id, playerId, wish.TorRoles, wish.Admin)); // Rückmeldung nach TOR
+                }
+                else
+                {
+                    results.Add(Result(wish.Id, "failed", "noSlot"));
+                    failed++;
+                }
                 continue;
             }
             if (!Enum.TryParse<RoleTypes>(wish.RoleName, out var role) || !Enum.IsDefined(typeof(RoleTypes), role))
@@ -359,7 +418,8 @@ internal static class RoleWishes
 
         var planned = planner.Result;
         for (var i = 0; i < roles.Length; i++) roles[i] = (RoleTypes)planned[i].Role;
-        CrewStatsPlugin.Logger.LogInfo($"Rollenwünsche: {applied} erfüllt, {failed} nicht möglich, {absent} nicht in der Runde.");
+        CrewStatsPlugin.Logger.LogInfo($"Rollenwünsche: {applied} erfüllt, {failed} nicht möglich, {absent} nicht in der Runde" +
+            (torWishes.Count > 0 ? $", {torWishes.Count} für The Other Roles." : "."));
         return results;
     }
 
@@ -382,6 +442,7 @@ internal static class RoleWishes
     public static void Reset()
     {
         if (_capturing) Release();
+        TorRoleWishes.Reset();
         lock (Lock)
         {
             _ready = null;

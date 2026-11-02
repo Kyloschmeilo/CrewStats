@@ -142,6 +142,15 @@ internal static class SelectRolesPatch
     }
 }
 
+// Ganz am Ende (nach The Other Roles): Rückmeldung zu Wünschen auf TOR-Rollen (TorRoleWishes).
+[HarmonyPatch(typeof(RoleManager), nameof(RoleManager.SelectRoles))]
+internal static class SelectRolesAfterTorPatch
+{
+    [HarmonyPriority(Priority.Last)]
+    [HarmonyAfter(TorBridge.PluginId)]
+    public static void Postfix() => Safe.Run(RoleWishes.AfterTorRoles);
+}
+
 // Rollen selbst würfeln: während SelectRoles die Würfelergebnisse des Spiels ersetzen (RoleShuffle).
 // Nur einfache statische int-Methoden patchen – Patches auf Methoden mit Nullable-/Il2Cpp-Listen-Parametern
 // haben in 1.3.3 die .NET-Laufzeit abstürzen lassen.

@@ -11,7 +11,7 @@ namespace CrewStats;
 /// damit CrewStats ohne TOR genauso läuft und eine neue TOR-Version höchstens diese Zusatzinfos kostet
 /// (jeder Fehler wird einmal geloggt, dann ist die Funktion aus). Gelesen wird nur, was TOR auf jedem
 /// Client ohnehin weiß (Rollen erst nach Spielende bzw. als Host, Erpressung/Gefängnis sieht im Meeting jeder);
-/// geändert wird an TOR nichts.
+/// geändert wird an TOR nur die Spielerauswahl bei Rollenwünschen (<see cref="TorRoleWishes"/>).
 /// </summary>
 internal static class TorBridge
 {
@@ -216,6 +216,16 @@ internal static class TorBridge
             result[key] = RoundStats.StripTags(value);
         }
         return result;
+    });
+
+    /// <summary>Ein Typ aus der TOR-DLL (null, wenn TOR fehlt) – für <see cref="TorRoleWishes"/>.</summary>
+    internal static Type? FindType(string name) => TorType(name);
+
+    /// <summary>Name eines TOR-RoleId-Werts, z.B. 4 → "Sheriff" (null, wenn unbekannt).</summary>
+    public static string? RoleIdName(byte value) => Try("RoleId", () =>
+    {
+        var type = TorType("TheOtherRoles.RoleId");
+        return type == null ? null : Enum.GetName(type, Enum.ToObject(type, (int)value));
     });
 
     // ---------- intern ----------
