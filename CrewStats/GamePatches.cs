@@ -22,6 +22,7 @@ internal static class IntroCutscenePatch
     {
         Safe.Run(GameRecorder.OnGameStart);
         Safe.Run(SettingsReporter.OnGameStart);
+        Safe.Run(RoundSummary.OnGameStart);
     }
 }
 
@@ -30,8 +31,9 @@ internal static class MurderPlayerPatch
 {
     public static void Postfix(PlayerControl __instance, PlayerControl target, MurderResultFlags resultFlags)
     {
-        if (resultFlags.HasFlag(MurderResultFlags.Succeeded))
-            Safe.Run(() => GameRecorder.OnKill(__instance, target));
+        if (!resultFlags.HasFlag(MurderResultFlags.Succeeded)) return;
+        Safe.Run(() => GameRecorder.OnKill(__instance, target));
+        Safe.Run(() => RoundSummary.OnKill(__instance, target));
     }
 }
 
@@ -89,6 +91,7 @@ internal static class GameEndPatch
         Safe.Run(RoleWishes.Reset);
         Safe.Run(RoleShuffle.Reset);
         _rawReason = (int)endGameResult.GameOverReason;
+        Safe.Run(RoundSummary.OnGameEnd);
         if (!GameRecorder.IsTorRound) Safe.Run(() => GameRecorder.OnGameEnd(endGameResult.GameOverReason));
     }
 
@@ -98,6 +101,7 @@ internal static class GameEndPatch
     public static void Postfix()
     {
         if (GameRecorder.IsTorRound) Safe.Run(() => GameRecorder.OnGameEndTor(_rawReason));
+        Safe.Run(RoundSummary.OnGameEndPostfix);
     }
 }
 
@@ -283,7 +287,7 @@ internal static class VersionShowerPatch
     {
         TorPacketFix.TryApply();
         AutoJoin.OnVersionShower(__instance);
-        if (Updater.Notice != null && __instance.text != null)
+        if (CrewStatsPlugin.ShowUpdateNotice.Value && Updater.Notice != null && __instance.text != null)
             __instance.text.text += $"\n<color=#FFD54F>{Updater.Notice}</color>";
     });
 }

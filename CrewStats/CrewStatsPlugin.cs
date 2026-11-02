@@ -31,6 +31,13 @@ public partial class CrewStatsPlugin : BasePlugin
     internal static ConfigEntry<bool> AutoJoinAutomatic { get; private set; } = null!;
     internal static ConfigEntry<UnityEngine.KeyCode> AutoJoinKey { get; private set; } = null!;
     internal static ConfigEntry<UnityEngine.KeyCode> AutoJoinToggleKey { get; private set; } = null!;
+    internal static ConfigEntry<bool> ShowOverlay { get; private set; } = null!;
+    internal static ConfigEntry<bool> ShowLobbyInfo { get; private set; } = null!;
+    internal static ConfigEntry<bool> ShowRoundSummary { get; private set; } = null!;
+    internal static ConfigEntry<bool> ShowStatus { get; private set; } = null!;
+    internal static ConfigEntry<bool> ShowUpdateNotice { get; private set; } = null!;
+    internal static ConfigEntry<bool> RetryUploads { get; private set; } = null!;
+    internal static ConfigEntry<UnityEngine.KeyCode> SettingsKey { get; private set; } = null!;
     internal static string DataDirectory { get; private set; } = null!;
 
     public Harmony Harmony { get; } = new(Id);
@@ -110,6 +117,45 @@ public partial class CrewStatsPlugin : BasePlugin
             "Beim Spielstart auf GitHub nach einer neuen CrewStats-Version suchen und sie installieren " +
             "(aktiv ab dem nächsten Start).");
 
+        ShowOverlay = Config.Bind(
+            "Komfort",
+            "Overlay",
+            true,
+            "In der Lobby links deine Stats aus dem Discord zeigen (Level, XP, Siege, letzte Rolle). " +
+            "Braucht die Auto-Join-URL (oder als Host die WebhookUrl).");
+        ShowLobbyInfo = Config.Bind(
+            "Komfort",
+            "LobbyInfo",
+            true,
+            "In der Lobby zeigen, wer mit Discord verknüpft ist (mit Level und Siegen).");
+        ShowRoundSummary = Config.Bind(
+            "Komfort",
+            "Rundenzusammenfassung",
+            true,
+            "Nach der Runde deine Rolle, Kills, Aufgaben und die XP aus dem Discord zeigen (nichts während der Runde).");
+        ShowStatus = Config.Bind(
+            "Komfort",
+            "Verbindungsstatus",
+            true,
+            "Unten links im Hauptmenü und in der Lobby: Punkt für die Verbindung zum Bot (grün/gelb/rot) mit Fehlerhinweis.");
+        ShowUpdateNotice = Config.Bind(
+            "Komfort",
+            "UpdateHinweis",
+            true,
+            "Beim Start nach einer neuen CrewStats-Version suchen und im Spiel darauf hinweisen " +
+            "(auch wenn [Update] AutoUpdate aus ist).");
+        RetryUploads = Config.Bind(
+            "Komfort",
+            "Nachsenden",
+            true,
+            "Runden, die nicht gesendet werden konnten (z.B. ohne Internet), liegen in BepInEx/CrewStats/pending " +
+            "und werden alle 2 Minuten erneut gesendet. false = nur beim Spielstart und nach der nächsten Runde.");
+        SettingsKey = Config.Bind(
+            "Komfort",
+            "TasteMenue",
+            UnityEngine.KeyCode.F7,
+            "Öffnet/schließt das CrewStats-Einstellungsmenü (alle Funktionen einzeln an/aus, Discord verknüpfen).");
+
         DataDirectory = Path.Combine(Paths.BepInExRootPath, "CrewStats");
         Directory.CreateDirectory(DataDirectory);
 
@@ -121,5 +167,15 @@ public partial class CrewStatsPlugin : BasePlugin
 
         Updater.RemoveLeftovers();
         Task.Run(Updater.CheckAsync);
+
+        // Anzeige: Verbindungsstatus, Stats, Rundenzusammenfassung, Einstellungsmenü (F7)
+        try
+        {
+            AddComponent<ComfortUi>();
+        }
+        catch (System.Exception exc)
+        {
+            Log.LogError($"Komfort-Anzeige konnte nicht starten (Rest der Mod läuft normal): {exc}");
+        }
     }
 }
