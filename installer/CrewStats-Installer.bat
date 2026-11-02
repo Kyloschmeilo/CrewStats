@@ -141,7 +141,7 @@ function Install-Mod([string]$game) {
 function Set-ConfigUrl([string]$game, [string]$section, [string]$key, [string]$label, [string[]]$intro, [string]$skipWarning) {
     $configDir = Join-Path $game 'BepInEx\config'
     $config = Join-Path $configDir $ConfigName
-    $keyPattern = "(?m)^\s*$key\s*=.*$"
+    $keyPattern = "(?m)^[ \t]*$key[ \t]*=[^\r\n]*"
     $current = ''
     if (Test-Path $config) {
         $line = Select-String -Path $config -Pattern "^\s*$key\s*=\s*(.*)$" | Select-Object -First 1
