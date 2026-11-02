@@ -11,8 +11,10 @@ using System.Threading.Tasks;
 namespace CrewStats;
 
 /// <summary>
-/// Speichert jede Runde lokal (BepInEx/CrewStats/pending) und schickt sie per
-/// Discord-Webhook an den Bot. Schlägt das Senden fehl, wird es später nachgeholt.
+/// Offline-Puffer: speichert jede Runde lokal (BepInEx/CrewStats/pending) und schickt sie per Discord-Webhook an den
+/// Bot. Schlägt das Senden fehl, wird es nachgeholt – beim nächsten Start, nach der nächsten Runde und (Config
+/// [Komfort] Nachsenden, Standard an) alle 2 Minuten, solange das Spiel läuft. Gesendete liegen in „sent“ (die
+/// neuesten 300), Runden, die Discord dauerhaft ablehnt, in „failed“ (blockieren die anderen nicht).
 /// </summary>
 internal static class RoundUploader
 {
@@ -26,12 +28,56 @@ internal static class RoundUploader
 
     private static string PendingDirectory => Path.Combine(CrewStatsPlugin.DataDirectory, "pending");
     private static string SentDirectory => Path.Combine(CrewStatsPlugin.DataDirectory, "sent");
+    private static string FailedDirectory => Path.Combine(CrewStatsPlugin.DataDirectory, "failed");
+    private const int KeepSent = 300;
+    private static readonly TimeSpan RetryInterval = TimeSpan.FromMinutes(2);
+    private static DateTime _nextRetry = DateTime.UtcNow + TimeSpan.FromMinutes(1);
+    private static int _pending = -1;
+
+    /// <summary>Wie viele Runden noch aufs Senden warten (für den Verbindungsstatus).</summary>
+    public static int PendingCount
+    {
+        get
+        {
+            if (_pending < 0) _pending = CountPending();
+            return _pending;
+        }
+    }
+
+    private static int CountPending()
+    {
+        try
+        {
+            return Directory.Exists(PendingDirectory) ? Directory.GetFiles(PendingDirectory, "*.json").Length : 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>Aus dem Spiel-Thread (jeden Frame): liegen Runden im Puffer, alle 2 Minuten erneut senden.</summary>
+    public static void Tick()
+    {
+        if (DateTime.UtcNow < _nextRetry) return;
+        _nextRetry = DateTime.UtcNow + RetryInterval;
+        if (!CrewStatsPlugin.RetryUploads.Value || PendingCount == 0 || WebhookUrl == null) return;
+        Task.Run(FlushPendingAsync);
+    }
+
+    /// <summary>Sofort nachsenden (Knopf im Einstellungsmenü).</summary>
+    public static void RetryNow()
+    {
+        _nextRetry = DateTime.UtcNow + RetryInterval;
+        Task.Run(FlushPendingAsync);
+    }
 
     public static void SaveAndSend(RoundRecord round)
     {
         Directory.CreateDirectory(PendingDirectory);
         var file = Path.Combine(PendingDirectory, $"{round.StartedAt:yyyyMMdd-HHmmss}-{round.GameId}.json");
         File.WriteAllBytes(file, Serialize(round));
+        _pending = CountPending();
         Task.Run(FlushPendingAsync); // im Hintergrund – das Spiel ruckelt nicht
     }
 
@@ -71,9 +117,13 @@ internal static class RoundUploader
             Directory.CreateDirectory(SentDirectory);
             foreach (var file in Directory.GetFiles(PendingDirectory, "*.json").OrderBy(f => f))
             {
-                if (!await SendAsync(url, file)) break; // später erneut versuchen
-                File.Move(file, Path.Combine(SentDirectory, Path.GetFileName(file)), overwrite: true);
+                var result = await SendAsync(url, file);
+                if (result == Upload.Retry) break; // später erneut versuchen
+                var target = result == Upload.Sent ? SentDirectory : FailedDirectory;
+                Directory.CreateDirectory(target);
+                File.Move(file, Path.Combine(target, Path.GetFileName(file)), overwrite: true);
             }
+            PruneSent();
         }
         catch (Exception exc)
         {
@@ -81,22 +131,65 @@ internal static class RoundUploader
         }
         finally
         {
+            _pending = CountPending();
             SendLock.Release();
         }
     }
 
-    private static async Task<bool> SendAsync(string url, string file)
+    private static void PruneSent()
     {
-        if (await PostJsonFileAsync(url, await File.ReadAllBytesAsync(file), "crewstats-round.json", "🎮 Neue Among-Us-Runde"))
+        var sent = Directory.GetFiles(SentDirectory, "*.json").OrderByDescending(f => f).Skip(KeepSent).ToList();
+        foreach (var file in sent)
         {
-            CrewStatsPlugin.Logger.LogInfo($"Runde an Discord gesendet ({Path.GetFileName(file)})");
-            return true;
+            try
+            {
+                File.Delete(file);
+            }
+            catch
+            {
+                // nicht schlimm
+            }
         }
-        return false;
+    }
+
+    private enum Upload { Sent, Retry, Rejected }
+
+    private static async Task<Upload> SendAsync(string url, string file)
+    {
+        try
+        {
+            var status = await PostJsonFileWithStatusAsync(url, await File.ReadAllBytesAsync(file), "crewstats-round.json", "🎮 Neue Among-Us-Runde");
+            if (status is >= 200 and < 300)
+            {
+                CrewStatsPlugin.Logger.LogInfo($"Runde an Discord gesendet ({Path.GetFileName(file)})");
+                return Upload.Sent;
+            }
+            if (status is 401 or 404)
+            {
+                ConnectionStatus.Report(ConnectionStatus.State.Error, "Webhook-URL ungültig – /mod-setup im Discord");
+                return Upload.Retry; // mit neuer URL klappt es wieder
+            }
+            if (status is 400 or 413)
+            {
+                CrewStatsPlugin.Logger.LogWarning($"Discord lehnt {Path.GetFileName(file)} dauerhaft ab – liegt jetzt in „failed“.");
+                return Upload.Rejected;
+            }
+            ConnectionStatus.Report(ConnectionStatus.State.Error, $"Runde nicht gesendet (Discord {status}) – wird nachgeholt");
+            return Upload.Retry;
+        }
+        catch (Exception exc) when (exc is System.Net.Http.HttpRequestException or TaskCanceledException)
+        {
+            ConnectionStatus.Report(ConnectionStatus.State.Error, "Discord nicht erreichbar – Runde wird nachgeholt");
+            CrewStatsPlugin.Logger.LogWarning($"Runde nicht gesendet ({exc.Message}) – wird nachgeholt.");
+            return Upload.Retry;
+        }
     }
 
     /// <summary>Schickt eine JSON-Datei als Anhang über den Webhook. Der Bot erkennt sie am Dateinamen.</summary>
-    public static async Task<bool> PostJsonFileAsync(string url, byte[] content, string fileName, string message)
+    public static async Task<bool> PostJsonFileAsync(string url, byte[] content, string fileName, string message) =>
+        await PostJsonFileWithStatusAsync(url, content, fileName, message) is >= 200 and < 300;
+
+    private static async Task<int> PostJsonFileWithStatusAsync(string url, byte[] content, string fileName, string message)
     {
         using var form = new MultipartFormDataContent();
         var payload = JsonSerializer.Serialize(new { username = "CrewStats", content = message, flags = 4096 });
@@ -107,8 +200,8 @@ internal static class RoundUploader
         form.Add(json, "files[0]", fileName);
 
         using var response = await Http.PostAsync(url, form);
-        if (response.IsSuccessStatusCode) return true;
-        CrewStatsPlugin.Logger.LogWarning($"Discord hat {fileName} abgelehnt: {(int)response.StatusCode} {response.ReasonPhrase}");
-        return false;
+        if (!response.IsSuccessStatusCode)
+            CrewStatsPlugin.Logger.LogWarning($"Discord hat {fileName} abgelehnt: {(int)response.StatusCode} {response.ReasonPhrase}");
+        return (int)response.StatusCode;
     }
 }

@@ -1,9 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using InnerNet;
 using UnityEngine;
@@ -23,8 +19,6 @@ namespace CrewStats;
 /// </summary>
 internal static class AutoJoin
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(6) };
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(700);
     private static readonly TimeSpan ReplyTimeout = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan AutoInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan FirstDelay = TimeSpan.FromSeconds(3); // Hauptmenü erst fertig aufbauen lassen
@@ -153,10 +147,11 @@ internal static class AutoJoin
     {
         try
         {
-            var lobby = await RequestAsync(url);
+            var lobby = await BotClient.AskAsync(url, AutoJoinRules.RequestContent(), "CrewStats Auto-Join",
+                AutoJoinRules.ParseReply, ReplyTimeout);
             if (lobby == null)
             {
-                SetStatus("Auto-Join: keine Antwort vom Bot");
+                SetStatus($"Auto-Join: {ConnectionStatus.Current.Message}");
                 return;
             }
 
@@ -190,72 +185,6 @@ internal static class AutoJoin
         {
             lock (Lock) _busy = false;
         }
-    }
-
-    /// <summary>Anfrage senden, auf die Antwort des Bots warten (er bearbeitet unsere Nachricht), Nachricht löschen.</summary>
-    private static async Task<LobbyInfo?> RequestAsync(string url)
-    {
-        using var posted = await Http.PostAsync(url + "?wait=true", Body(AutoJoinRules.RequestContent()));
-        if (!posted.IsSuccessStatusCode)
-        {
-            CrewStatsPlugin.Logger.LogWarning($"Auto-Join: Discord hat die Anfrage abgelehnt: {(int)posted.StatusCode} {posted.ReasonPhrase}" +
-                (posted.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized ? " – Auto-Join-URL ungültig? (/autojoin im Discord)" : ""));
-            return null;
-        }
-        string messageId;
-        using (var json = JsonDocument.Parse(await posted.Content.ReadAsStringAsync()))
-            messageId = json.RootElement.GetProperty("id").GetString() ?? "";
-        var messageUrl = $"{url}/messages/{messageId}";
-
-        try
-        {
-            var deadline = DateTime.UtcNow + ReplyTimeout;
-            while (DateTime.UtcNow < deadline)
-            {
-                await Task.Delay(PollInterval);
-                using var response = await Http.GetAsync(messageUrl);
-                if (response.StatusCode == HttpStatusCode.TooManyRequests)
-                {
-                    await Task.Delay(RetryAfter(response));
-                    continue;
-                }
-                if (!response.IsSuccessStatusCode) continue;
-
-                string? content;
-                using (var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()))
-                    content = json.RootElement.TryGetProperty("content", out var c) ? c.GetString() : null;
-                var reply = AutoJoinRules.ParseReply(content);
-                if (reply != null) return reply;
-            }
-            CrewStatsPlugin.Logger.LogWarning("Auto-Join: keine Antwort vom Bot (läuft er?).");
-            return null;
-        }
-        finally
-        {
-            try
-            {
-                using var _ = await Http.DeleteAsync(messageUrl); // sonst räumt der Bot nach 30 s auf
-            }
-            catch
-            {
-                // nicht schlimm
-            }
-        }
-    }
-
-    private static StringContent Body(string content) =>
-        new(JsonSerializer.Serialize(new
-        {
-            username = "CrewStats Auto-Join",
-            content,
-            flags = 4096, // keine Benachrichtigung im Channel
-            allowed_mentions = new { parse = Array.Empty<string>() },
-        }), Encoding.UTF8, "application/json");
-
-    private static TimeSpan RetryAfter(HttpResponseMessage response)
-    {
-        var seconds = response.Headers.RetryAfter?.Delta?.TotalSeconds ?? 1;
-        return TimeSpan.FromSeconds(Math.Clamp(seconds, 0.2, 5));
     }
 
     private static void SetStatus(string status)

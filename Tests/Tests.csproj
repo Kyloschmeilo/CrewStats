@@ -14,6 +14,7 @@
         <Compile Include="../CrewStats/RoundStats.cs" Link="RoundStats.cs" />
         <Compile Include="../CrewStats/TorWishPicker.cs" Link="TorWishPicker.cs" />
         <Compile Include="../CrewStats/AutoJoinRules.cs" Link="AutoJoinRules.cs" />
+        <Compile Include="../CrewStats/PlayerInfoRules.cs" Link="PlayerInfoRules.cs" />
         <None Include="../docs/beispiel-runde.json" Link="beispiel-runde.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 

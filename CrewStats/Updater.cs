@@ -25,6 +25,9 @@ internal static class Updater
     /// <summary>Hinweis fürs Hauptmenü, sobald ein Update installiert wurde.</summary>
     public static string? Notice { get; private set; }
 
+    /// <summary>Hinweis weggeklickt (Overlay).</summary>
+    public static void Dismiss() => Notice = null;
+
     private static string PluginFile
     {
         get
@@ -52,7 +55,8 @@ internal static class Updater
 
     public static async Task CheckAsync()
     {
-        if (!CrewStatsPlugin.AutoUpdate.Value || GitHubRepo.StartsWith("DEIN-")) return;
+        var install = CrewStatsPlugin.AutoUpdate.Value;
+        if ((!install && !CrewStatsPlugin.ShowUpdateNotice.Value) || GitHubRepo.StartsWith("DEIN-")) return;
         try
         {
             var json = await Http.GetStringAsync($"https://api.github.com/repos/{GitHubRepo}/releases/latest");
@@ -68,6 +72,13 @@ internal static class Updater
             if (latest <= current)
             {
                 CrewStatsPlugin.Logger.LogInfo($"CrewStats ist aktuell ({current}).");
+                return;
+            }
+
+            if (!install)
+            {
+                Notice = $"CrewStats {latest} ist da (du hast {current}) – Auto-Update ist aus (F7)";
+                CrewStatsPlugin.Logger.LogInfo($"Neue Version {latest} verfügbar, Auto-Update ist aus.");
                 return;
             }
 
