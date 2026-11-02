@@ -51,6 +51,41 @@ public class AutoJoinRulesTests
         Assert.Equal(AutoJoinRules.Decision.Join, AutoJoinRules.Decide(Lobby(code: "GHIJKL"), joined, manual: false));
     }
 
+    [Fact]
+    public void Region_des_Hosts_lesen()
+    {
+        var reply = AutoJoinRules.ParseReply(
+            "{\"crewstats\":\"join-reply\",\"v\":1,\"state\":\"open\",\"code\":\"QWERTY\",\"region\":\"Modded NA (MNA)\",\"server\":\"https://www.aumods.org\"}");
+        Assert.Equal("Modded NA (MNA)", reply!.Region);
+        Assert.Equal("https://www.aumods.org", reply.Server);
+    }
+
+    private static readonly RegionEntry[] Regions =
+    {
+        new("North America", new[] { "matchmaker.among.us", "https://matchmaker.among.us" }),
+        new("Europe", new[] { "matchmaker-eu.among.us", "https://matchmaker-eu.among.us" }),
+        new("Modded NA (MNA)", new[] { "https://www.aumods.org", "https://www.aumods.org" }),
+    };
+
+    [Theory]
+    [InlineData("Europe", "https://matchmaker-eu.among.us", 1)]
+    [InlineData("Europa", "https://MATCHMAKER-EU.among.us:443/", 1)] // Name übersetzt, Adresse gleich
+    [InlineData("Modded NA", "https://www.aumods.org", 2)] // anderer Name je Region-Mod
+    [InlineData("north america", "", 0)] // nur Name
+    [InlineData("Modded EU (MEU)", "https://au-eu.duikbo.at", -1)] // gibt es in diesem Spiel nicht
+    public void Region_finden(string region, string server, int expected) =>
+        Assert.Equal(expected, AutoJoinRules.FindRegion(Regions, region, server));
+
+    [Fact]
+    public void Ohne_Region_aktuelle_versuchen() => Assert.Null(AutoJoinRules.FindRegion(Regions, "", " "));
+
+    [Theory]
+    [InlineData("https://www.aumods.org:443/", "www.aumods.org")]
+    [InlineData("matchmaker-eu.among.us", "matchmaker-eu.among.us")]
+    [InlineData(null, "")]
+    public void Adresse_vergleichbar(string? address, string expected) =>
+        Assert.Equal(expected, AutoJoinRules.NormalizeAddress(address));
+
     [Theory]
     [InlineData("https://discord.com/api/webhooks/123/abc", "https://discord.com/api/webhooks/123/abc")]
     [InlineData("  https://discord.com/api/webhooks/123/abc/?wait=true ", "https://discord.com/api/webhooks/123/abc")]

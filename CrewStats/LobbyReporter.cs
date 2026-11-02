@@ -13,7 +13,8 @@ namespace CrewStats;
 /// </summary>
 internal static class LobbyReporter
 {
-    private sealed record Snapshot(string State, string Code, string Map, int Players, int Max, string Host);
+    private sealed record Snapshot(string State, string Code, string Map, int Players, int Max, string Host,
+        string Region, string Server);
 
     private const double MinSecondsBetweenUpdates = 5;
     private static readonly LatestWebhookSender Sender = new("Lobby");
@@ -63,6 +64,7 @@ internal static class LobbyReporter
         else return null; // Endbildschirm o.ä. – nichts melden
 
         var options = GameOptionsManager.Instance?.CurrentGameOptions;
+        var region = ServerManager.Instance?.CurrentRegion;
         var local = PlayerControl.LocalPlayer;
         if (local != null && local.Data != null && !string.IsNullOrEmpty(local.Data.FriendCode))
             _sender = local.Data.FriendCode;
@@ -73,7 +75,19 @@ internal static class LobbyReporter
             options != null ? GameRecorder.MapName(options.MapId) : "?",
             GameData.Instance != null ? GameData.Instance.PlayerCount : 0,
             options?.MaxPlayers ?? 0,
-            local != null && local.Data != null ? local.Data.PlayerName ?? "" : "");
+            local != null && local.Data != null ? local.Data.PlayerName ?? "" : "",
+            region?.Name ?? "",
+            region != null ? MainAddress(region) : "");
+    }
+
+    /// <summary>Adresse des ersten Servers der Region (sonst Ping-Server) – für Auto-Join (Lobby-Codes gelten nur dort).</summary>
+    private static string MainAddress(IRegionInfo region)
+    {
+        var servers = region.Servers;
+        if (servers != null)
+            foreach (var server in servers)
+                if (server != null && !string.IsNullOrEmpty(server.Ip)) return server.Ip;
+        return region.PingServer ?? "";
     }
 
     private static void Send(Snapshot snapshot)
@@ -91,6 +105,8 @@ internal static class LobbyReporter
             max = snapshot.Max,
             host = snapshot.Host,
             sender = _sender,
+            region = snapshot.Region,
+            server = snapshot.Server,
         }));
         CrewStatsPlugin.Logger.LogInfo($"Lobby: {snapshot.State} {snapshot.Code} ({snapshot.Players}/{snapshot.Max})");
     }
