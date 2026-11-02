@@ -138,33 +138,47 @@ function Install-Mod([string]$game) {
     Ok "CrewStats $version installiert."
 }
 
-function Set-Webhook([string]$game) {
+function Set-ConfigUrl([string]$game, [string]$section, [string]$key, [string]$label, [string[]]$intro, [string]$skipWarning) {
     $configDir = Join-Path $game 'BepInEx\config'
     $config = Join-Path $configDir $ConfigName
+    $keyPattern = "(?m)^\s*$key\s*=.*$"
     $current = ''
     if (Test-Path $config) {
-        $line = Select-String -Path $config -Pattern '^\s*WebhookUrl\s*=\s*(.*)$' | Select-Object -First 1
+        $line = Select-String -Path $config -Pattern "^\s*$key\s*=\s*(.*)$" | Select-Object -First 1
         if ($line) { $current = $line.Matches[0].Groups[1].Value.Trim() }
     }
-    Write-Host '      Die Webhook-URL brauchst du nur, wenn DU hostest (Rundenauswertung + Auto-Mute).'
-    Write-Host '      Du bekommst sie vom Server-Admin. Sie ist geheim - nicht weitergeben!'
+    foreach ($text in $intro) { Write-Host "      $text" }
     if ($current) { Write-Host '      Es ist schon eine URL eingetragen. Enter = behalten.' } else { Write-Host '      Enter = überspringen.' }
     while ($true) {
-        $url = (Read-Host '      Webhook-URL').Trim()
-        if (-not $url) { if ($current) { Ok 'Webhook-URL behalten.' } else { Warn 'Ohne Webhook-URL werden keine Runden gesendet.' }; return }
+        $url = (Read-Host "      $label").Trim()
+        if (-not $url) { if ($current) { Ok "$label behalten." } else { Warn $skipWarning }; return }
         if ($url -match $WebhookPattern) { break }
         Warn 'Das ist keine Discord-Webhook-URL (https://discord.com/api/webhooks/...).'
     }
     New-Item -ItemType Directory -Force $configDir | Out-Null
     if (Test-Path $config) {
         $text = Get-Content $config -Raw -Encoding UTF8
-        if ($text -match '(?m)^\s*WebhookUrl\s*=.*$') { $text = $text -replace '(?m)^\s*WebhookUrl\s*=.*$', "WebhookUrl = $url" }
-        else { $text = $text.TrimEnd() + "`r`n`r`n[Discord]`r`n`r`nWebhookUrl = $url`r`n" }
+        if ($text -match $keyPattern) { $text = $text -replace $keyPattern, "$key = $url" }
+        else { $text = $text.TrimEnd() + "`r`n`r`n[$section]`r`n`r`n$key = $url`r`n" }
     } else {
-        $text = "[Discord]`r`n`r`nWebhookUrl = $url`r`n"   # BepInEx ergänzt den Rest beim ersten Start
+        $text = "[$section]`r`n`r`n$key = $url`r`n"   # BepInEx ergänzt den Rest beim ersten Start
     }
     [IO.File]::WriteAllText($config, $text, (New-Object Text.UTF8Encoding $false))
-    Ok 'Webhook-URL gespeichert.'
+    Ok "$label gespeichert."
+}
+
+function Set-Webhook([string]$game) {
+    Set-ConfigUrl $game 'Discord' 'WebhookUrl' 'Webhook-URL' @(
+        'Die Webhook-URL brauchst du nur, wenn DU hostest (Rundenauswertung + Auto-Mute).',
+        'Du bekommst sie vom Server-Admin. Sie ist geheim - nicht weitergeben!'
+    ) 'Ohne Webhook-URL werden keine Runden gesendet.'
+}
+
+function Set-AutoJoin([string]$game) {
+    Set-ConfigUrl $game 'AutoJoin' 'Url' 'Auto-Join-URL' @(
+        'Mit Auto-Join tritt Among Us im Hauptmenü automatisch der neuesten Lobby aus dem Discord bei.',
+        'Die URL zeigt dir der Bot im Discord mit /autojoin.'
+    ) 'Ohne Auto-Join-URL gibt es kein automatisches Beitreten.'
 }
 
 function Uninstall([string]$game) {
@@ -213,10 +227,14 @@ Install-Mod $game
 Step 'Discord-Webhook'
 Set-Webhook $game
 
+Step 'Auto-Join'
+Set-AutoJoin $game
+
 Write-Host ''
 Write-Host '  Fertig!' -ForegroundColor Green
 Write-Host '  - Der erste Start dauert 1-2 Minuten (BepInEx bereitet alles vor).'
 Write-Host '  - Auto-Mute an/aus: im Spiel ESC -> Reiter "Allgemein" -> "Auto-Mute".'
+Write-Host '  - Auto-Join: im Hauptmenü F5 = neueste Lobby sofort beitreten, F6 = automatisch an/aus.'
 Write-Host '  - Verknüpfe einmal deinen Friendcode im Discord: /verknuepfen'
 Write-Host '  - Die Mod aktualisiert sich ab jetzt selbst.'
 if ((Read-Host "`n  Among Us jetzt starten? (j/n)").Trim() -match '^(j|ja|y|yes)$') { Start-Process 'steam://rungameid/945360' }

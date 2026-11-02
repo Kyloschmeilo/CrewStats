@@ -282,9 +282,18 @@ internal static class VersionShowerPatch
     public static void Postfix(VersionShower __instance) => Safe.Run(() =>
     {
         TorPacketFix.TryApply();
+        AutoJoin.OnVersionShower(__instance);
         if (Updater.Notice != null && __instance.text != null)
             __instance.text.text += $"\n<color=#FFD54F>{Updater.Notice}</color>";
     });
+}
+
+// ---------- Auto-Join ----------
+
+[HarmonyPatch(typeof(MainMenuManager), nameof(MainMenuManager.LateUpdate))]
+internal static class MainMenuLateUpdatePatch
+{
+    public static void Postfix() => AutoJoin.Tick(); // fängt eigene Fehler ab
 }
 
 internal static class Safe

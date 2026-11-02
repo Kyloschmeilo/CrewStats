@@ -24,6 +24,10 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam**, die mit unserem Discord-B
 - 🎭 **The Other Roles** – spielt ihr mit der Rollen-Mod The Other Roles (GMIA), schickt die Mod auch die
   TOR-Rollen, die echten Gewinner (Jester, Jackal, Liebespaar …) und Guesser-/Jailor-/Sheriff-Abschüsse an den Bot.
   Beim Auto-Mute bleiben Erpresste (Blackmailer) und Eingesperrte (Jailor) im Meeting auch im Discord stumm.
+- 🚪 **Auto-Join** – im Hauptmenü tritt Among Us automatisch der neuesten Lobby bei, die der Bot im Discord
+  ankündigt (jede Lobby nur einmal; **F5** = sofort beitreten, **F6** = automatisch an/aus, Status unter der
+  Versionsnummer). Dafür die Auto-Join-URL aus `/autojoin` im Installer eintragen – sie ist nicht die geheime
+  Webhook-URL und funktioniert für alle Spieler, nicht nur Hosts.
 - 🗂️ **Ausführliche Rundendaten** – Zeitleiste (Kills mit Ort, Stimmen mit Zeitpunkt, Aufgaben, Sabotagen, Vents …),
   Laufwege, Kosmetik und Einstellungen jeder Runde, als Grundlage für eine Stats-Website. Format:
   [`docs/rundenformat.md`](docs/rundenformat.md). Alles wird erst nach dem Spielende verschickt.
@@ -40,7 +44,8 @@ kann jeder im Discord nutzen.
 3. Enter drücken – der Installer findet Among Us, installiert BepInEx (64-Bit) und die Mod.
 4. Die **Webhook-URL** brauchst du nur, wenn du hostest – du bekommst sie vom Server-Admin.
    Sie ist geheim, bitte nicht weitergeben.
-5. Im Discord einmal deinen Friendcode verknüpfen: `/verknuepfen`
+5. Optional die **Auto-Join-URL** (Discord: `/autojoin`) – dann trittst du der neuesten Lobby automatisch bei.
+6. Im Discord einmal deinen Friendcode verknüpfen: `/verknuepfen`
 
 Der erste Spielstart dauert 1–2 Minuten. Danach **aktualisiert sich die Mod selbst**: Gibt es eine
 neue Version, wird sie beim Spielstart geladen und ist ab dem nächsten Start aktiv (Hinweis im Hauptmenü).

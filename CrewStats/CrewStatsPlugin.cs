@@ -27,6 +27,10 @@ public partial class CrewStatsPlugin : BasePlugin
     internal static ConfigEntry<bool> NoSkipOnEmergency { get; private set; } = null!;
     internal static ConfigEntry<bool> RoleWishesEnabled { get; private set; } = null!;
     internal static ConfigEntry<bool> ShuffleRoles { get; private set; } = null!;
+    internal static ConfigEntry<string> AutoJoinUrl { get; private set; } = null!;
+    internal static ConfigEntry<bool> AutoJoinAutomatic { get; private set; } = null!;
+    internal static ConfigEntry<UnityEngine.KeyCode> AutoJoinKey { get; private set; } = null!;
+    internal static ConfigEntry<UnityEngine.KeyCode> AutoJoinToggleKey { get; private set; } = null!;
     internal static string DataDirectory { get; private set; } = null!;
 
     public Harmony Harmony { get; } = new(Id);
@@ -77,6 +81,28 @@ public partial class CrewStatsPlugin : BasePlugin
             true,
             "Als Host die eigene Lobby (Code, Map, Spielerzahl) automatisch im Discord ankündigen. " +
             "Während der Runde ist das Wettbüro dann gesperrt.");
+        AutoJoinUrl = Config.Bind(
+            "AutoJoin",
+            "Url",
+            "",
+            "Auto-Join-URL, die der Bot bei /autojoin anzeigt (nicht die geheime WebhookUrl). " +
+            "Leer = kein Auto-Join.");
+        AutoJoinAutomatic = Config.Bind(
+            "AutoJoin",
+            "Automatisch",
+            true,
+            "Im Hauptmenü automatisch der neuesten Lobby aus dem Discord beitreten (jede Lobby nur einmal). " +
+            "Im Spiel mit der Taste AnAus umschaltbar.");
+        AutoJoinKey = Config.Bind(
+            "AutoJoin",
+            "TasteJetzt",
+            UnityEngine.KeyCode.F5,
+            "Im Hauptmenü: sofort der neuesten Lobby beitreten (auch wenn du sie schon einmal verlassen hast).");
+        AutoJoinToggleKey = Config.Bind(
+            "AutoJoin",
+            "TasteAnAus",
+            UnityEngine.KeyCode.F6,
+            "Im Hauptmenü: automatisches Beitreten an-/ausschalten.");
         AutoUpdate = Config.Bind(
             "Update",
             "AutoUpdate",
