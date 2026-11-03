@@ -3,13 +3,16 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CrewStats;
 
 /// <summary>
-/// Fragen an den Bot ohne offenen Port: Anfrage per Webhook mit ?wait=true schicken (dadurch kennen wir die
-/// Nachrichten-ID), der Bot bearbeitet GENAU diese Nachricht mit seiner Antwort, die Mod liest sie und löscht sie.
+/// Fragen an den Bot. Ist die URL eine Adresse der Stats-Website (…/api/mod/…, ab 1.8.0), antwortet die Website in
+/// EINER Anfrage. Sonst wie bisher über einen Webhook (kein offener Port beim Bot): Anfrage mit ?wait=true schicken
+/// (dadurch kennen wir die Nachrichten-ID), der Bot bearbeitet GENAU diese Nachricht mit seiner Antwort, die Mod liest
+/// sie und löscht sie.
 /// Benutzt von Auto-Join und den Komfort-Funktionen (Stats, Lobby-Info, Verknüpfen). Meldet jedes Ergebnis an
 /// <see cref="ConnectionStatus"/>. Läuft immer im Hintergrund (nie im Spiel-Thread aufrufen und warten).
 /// </summary>
@@ -29,6 +32,8 @@ internal static class BotClient
     public static async Task<T?> AskAsync<T>(string url, string content, string username, Func<string?, T?> parse, TimeSpan timeout)
         where T : class
     {
+        if (AutoJoinRules.IsWebsiteUrl(url)) return await AskWebsiteAsync(url, content, parse, timeout);
+
         string messageUrl;
         try
         {
@@ -99,6 +104,50 @@ internal static class BotClient
             {
                 // nicht schlimm
             }
+        }
+    }
+
+    /// <summary>Über die Stats-Website: Anfrage-JSON hinschicken, die Antwort steht direkt im Body.</summary>
+    private static async Task<T?> AskWebsiteAsync<T>(string url, string content, Func<string?, T?> parse, TimeSpan timeout)
+        where T : class
+    {
+        try
+        {
+            using var cancel = new CancellationTokenSource(timeout);
+            using var response = await Http.PostAsync(url, new StringContent(content, Encoding.UTF8, "application/json"), cancel.Token);
+            var text = await response.Content.ReadAsStringAsync();
+            switch ((int)response.StatusCode)
+            {
+                case 429:
+                    ConnectionStatus.Report(ConnectionStatus.State.Busy, "Website bremst gerade – gleich nochmal");
+                    return null;
+                case 404:
+                    ConnectionStatus.Report(ConnectionStatus.State.Error, "URL ungültig – im Discord /autojoin neu holen");
+                    return null;
+                case 503 or 504:
+                    ConnectionStatus.Report(ConnectionStatus.State.NoReply, "Bot gerade offline – gleich nochmal");
+                    return null;
+            }
+            if (!response.IsSuccessStatusCode)
+            {
+                ConnectionStatus.Report(ConnectionStatus.State.Error, $"Website-Fehler {(int)response.StatusCode}");
+                CrewStatsPlugin.Logger.LogWarning($"Bot-Anfrage: Website hat abgelehnt: {(int)response.StatusCode} {response.ReasonPhrase}");
+                return null;
+            }
+            var reply = parse(text);
+            if (reply == null)
+            {
+                ConnectionStatus.Report(ConnectionStatus.State.NoReply, "Antwort unlesbar (alte Website-Version?)");
+                return null;
+            }
+            ConnectionStatus.Report(ConnectionStatus.State.Ok, "Bot verbunden (über die Website)");
+            return reply;
+        }
+        catch (Exception exc)
+        {
+            ConnectionStatus.Report(ConnectionStatus.State.Error, "Website nicht erreichbar");
+            CrewStatsPlugin.Logger.LogWarning($"Bot-Anfrage über die Website fehlgeschlagen: {exc.Message}");
+            return null;
         }
     }
 

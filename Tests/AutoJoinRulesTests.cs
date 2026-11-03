@@ -93,5 +93,18 @@ public class AutoJoinRulesTests
     [InlineData("http://discord.com/api/webhooks/123/abc", null)]
     [InlineData("", null)]
     [InlineData(null, null)]
+    [InlineData("http://45.81.233.92:25570/api/mod/Ab3_xY-9kLmN0pQr", "http://45.81.233.92:25570/api/mod/Ab3_xY-9kLmN0pQr")]
+    [InlineData(" https://stats.example.org/api/mod/Ab3_xY-9kLmN0pQr/ ", "https://stats.example.org/api/mod/Ab3_xY-9kLmN0pQr")]
+    [InlineData("http://45.81.233.92:25570/api/mod/kurz", null)]
+    [InlineData("http://45.81.233.92:25570/api/mod/", null)]
+    [InlineData("http://45.81.233.92:25570/x/api/mod/Ab3_xY-9kLmN0pQr", null)]
+    [InlineData("ftp://45.81.233.92/api/mod/Ab3_xY-9kLmN0pQr", null)]
+    [InlineData("http://45.81.233.92:25570/api/mod/Ab3_xY/9kLmN0pQr", null)]
     public void Url_pruefen(string? url, string? expected) => Assert.Equal(expected, AutoJoinRules.NormalizeUrl(url));
+
+    [Theory]
+    [InlineData("http://45.81.233.92:25570/api/mod/Ab3_xY-9kLmN0pQr", true)]
+    [InlineData("https://discord.com/api/webhooks/123/abc", false)]
+    [InlineData(null, false)]
+    public void Website_erkennen(string? url, bool expected) => Assert.Equal(expected, AutoJoinRules.IsWebsiteUrl(url));
 }

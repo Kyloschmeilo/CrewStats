@@ -107,14 +107,38 @@ internal static class AutoJoinRules
         return text;
     }
 
-    /// <summary>Gültige Webhook-URL (…/api/webhooks/&lt;id&gt;/&lt;token&gt;) ohne Anhängsel, sonst null.</summary>
+    /// <summary>
+    /// Gültige Bot-URL ohne Anhängsel, sonst null: Discord-Webhook (…/api/webhooks/&lt;id&gt;/&lt;token&gt;) oder – ab 1.8.0 –
+    /// die Stats-Website (http(s)://adresse/api/mod/&lt;schlüssel&gt;), die /autojoin zeigt, wenn sie läuft.
+    /// </summary>
     public static string? NormalizeUrl(string? url)
     {
         var trimmed = (url ?? "").Trim().Split('?', '#')[0].TrimEnd('/');
+        if (IsWebsiteUrl(trimmed)) return trimmed;
         if (!trimmed.StartsWith("https://") || !trimmed.Contains("/api/webhooks/")) return null;
         var rest = trimmed[(trimmed.IndexOf("/api/webhooks/", StringComparison.Ordinal) + "/api/webhooks/".Length)..].Split('/');
         return rest.Length == 2 && rest[0].Length > 0 && rest[1].Length > 0 ? trimmed : null;
     }
+
+    /// <summary>
+    /// Website-URL: http(s)://adresse[:port]/api/mod/&lt;schlüssel&gt;. Dort antwortet die Website direkt (eine Anfrage),
+    /// statt Nachricht posten → auf den Bot warten → lesen → löschen wie beim Webhook.
+    /// </summary>
+    public static bool IsWebsiteUrl(string? url)
+    {
+        if (url == null) return false;
+        var scheme = url.StartsWith("https://") ? 8 : url.StartsWith("http://") ? 7 : -1;
+        if (scheme < 0) return false;
+        var path = url.IndexOf(WebsitePath, scheme, StringComparison.Ordinal);
+        if (path <= scheme || url[scheme..path].Contains('/') || url[scheme..path].Contains(' ')) return false;
+        var key = url[(path + WebsitePath.Length)..];
+        if (key.Length < 8) return false;
+        foreach (var c in key)
+            if (!(c is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '-' or '_')) return false;
+        return true;
+    }
+
+    private const string WebsitePath = "/api/mod/";
 
     private static string? Str(JsonElement root, string key) =>
         root.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
