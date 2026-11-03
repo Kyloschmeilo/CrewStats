@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using InnerNet;
 
@@ -9,12 +10,18 @@ namespace CrewStats;
 /// (offen + Spielerzahl, Runde läuft, geschlossen). Der Bot hält dazu eine Nachricht im
 /// Codes-Channel aktuell und sperrt während der Runde das Wettbüro.
 /// Spielerzahl-Änderungen werden gebündelt (höchstens alle 5 s), Zustandswechsel sofort gesendet.
+/// Seit 1.9.0 mit Spielerliste (Name, Friendcode, Farbe) für die Live-Anzeige der Stats-Website – die Website zeigt
+/// daraus nur Namen und Profil-Links, nie Friendcodes.
 /// JSON-Format ↔ Bot: services/Lobby.kt (beide Seiten gemeinsam ändern!).
 /// </summary>
 internal static class LobbyReporter
 {
     private sealed record Snapshot(string State, string Code, string Map, int Players, int Max, string Host,
-        string Region, string Server);
+        string Region, string Server, string RosterKey, List<RosterEntry> Roster);
+
+    internal sealed record RosterEntry(string Name, string Fc, int Color);
+
+    private const int MaxRoster = 20;
 
     private const double MinSecondsBetweenUpdates = 5;
     private static readonly LatestWebhookSender Sender = new("Lobby");
@@ -33,6 +40,8 @@ internal static class LobbyReporter
             var now = Current();
             if (now == null || now == _sent) return;
 
+            // record-Gleichheit vergleicht die Liste nur als Referenz → RosterKey
+            if (_sent != null && now with { Roster = _sent.Roster } == _sent) return;
             var important = _sent == null || _sent.State != now.State || _sent.Code != now.Code;
             if (!important && (DateTime.UtcNow - _sentAt).TotalSeconds < MinSecondsBetweenUpdates) return;
             Send(now);
@@ -49,7 +58,7 @@ internal static class LobbyReporter
     public static void Close()
     {
         if (_sent == null) return;
-        Send(_sent with { State = "closed", Players = 0 });
+        Send(_sent with { State = "closed", Players = 0, RosterKey = "", Roster = new List<RosterEntry>() });
         _sent = null;
     }
 
@@ -69,6 +78,7 @@ internal static class LobbyReporter
         if (local != null && local.Data != null && !string.IsNullOrEmpty(local.Data.FriendCode))
             _sender = local.Data.FriendCode;
 
+        var roster = Roster();
         return new Snapshot(
             state,
             GameCode.IntToGameName(client.GameId) ?? "",
@@ -77,7 +87,28 @@ internal static class LobbyReporter
             options?.MaxPlayers ?? 0,
             local != null && local.Data != null ? local.Data.PlayerName ?? "" : "",
             region?.Name ?? "",
-            region != null ? MainAddress(region) : "");
+            region != null ? MainAddress(region) : "",
+            string.Join("|", roster.ConvertAll(entry => $"{entry.Name}/{entry.Fc}/{entry.Color}")),
+            roster);
+    }
+
+    /// <summary>Wer in der Lobby ist (ohne getrennte Spieler), in der Reihenfolge des Spiels.</summary>
+    private static List<RosterEntry> Roster()
+    {
+        var result = new List<RosterEntry>();
+        var data = GameData.Instance;
+        if (data == null) return result;
+        foreach (var info in data.AllPlayers)
+        {
+            if (info == null || info.Disconnected) continue;
+            var outfit = info.DefaultOutfit;
+            result.Add(new RosterEntry(
+                info.PlayerName ?? "?",
+                (info.FriendCode ?? "").Trim().ToLowerInvariant(),
+                outfit != null ? outfit.ColorId : -1));
+            if (result.Count >= MaxRoster) break;
+        }
+        return result;
     }
 
     /// <summary>Adresse des ersten Servers der Region (sonst Ping-Server) – für Auto-Join (Lobby-Codes gelten nur dort).</summary>
@@ -107,6 +138,7 @@ internal static class LobbyReporter
             sender = _sender,
             region = snapshot.Region,
             server = snapshot.Server,
+            list = snapshot.Roster.ConvertAll(entry => new { name = entry.Name, fc = entry.Fc, color = entry.Color }),
         }));
         CrewStatsPlugin.Logger.LogInfo($"Lobby: {snapshot.State} {snapshot.Code} ({snapshot.Players}/{snapshot.Max})");
     }

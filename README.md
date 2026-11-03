@@ -29,6 +29,8 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam**, die mit unserem Discord-B
   Versionsnummer). Dafür die Auto-Join-URL aus `/autojoin` im Installer eintragen – sie ist nicht die geheime
   Webhook-URL und funktioniert für alle Spieler, nicht nur Hosts. Ab 1.8.0 ist das meist eine Adresse der
   Stats-Website (`…/api/mod/…`): die antwortet direkt, schneller als über einen Discord-Webhook.
+  Ab 1.9.0 zeigt die Website alle offenen Lobbys live mit ihren Spielern; dort auf **Beitreten** klicken, und das
+  eigene Among Us tritt im Hauptmenü genau dieser Lobby bei (auch mit ausgeschaltetem automatischem Auto-Join).
 - 🗂️ **Ausführliche Rundendaten** – Zeitleiste (Kills mit Ort, Stimmen mit Zeitpunkt, Aufgaben, Sabotagen, Vents …),
   Laufwege, Kosmetik und Einstellungen jeder Runde, als Grundlage für eine Stats-Website. Format:
   [`docs/rundenformat.md`](docs/rundenformat.md). Alles wird erst nach dem Spielende verschickt.
