@@ -43,6 +43,26 @@ public class AutoJoinRulesTests
     }
 
     [Fact]
+    public void Anfrage_an_die_Website_mit_Friendcode()
+    {
+        Assert.Equal("{\"crewstats\":\"join\",\"v\":1,\"fc\":\"kilian#1234\"}", AutoJoinRules.RequestContent(" Kilian#1234 "));
+        Assert.Equal("{\"crewstats\":\"join\",\"v\":1}", AutoJoinRules.RequestContent(null));
+    }
+
+    [Fact]
+    public void Beitreten_von_der_Website_nur_einmal_je_Wahl()
+    {
+        var reply = AutoJoinRules.ParseReply(
+            "{\"crewstats\":\"join-reply\",\"v\":1,\"state\":\"open\",\"code\":\"QWERTY\",\"pick\":\"abc123\"}")!;
+        Assert.Equal("abc123", reply.Pick);
+        var handled = new HashSet<string>();
+        Assert.True(AutoJoinRules.IsNewPick(reply, handled));
+        handled.Add("abc123");
+        Assert.False(AutoJoinRules.IsNewPick(reply, handled));
+        Assert.False(AutoJoinRules.IsNewPick(Lobby(), new HashSet<string>()), "ohne Wahl");
+    }
+
+    [Fact]
     public void Automatisch_nur_einmal_pro_Lobby_per_Taste_immer()
     {
         var joined = new HashSet<string> { "ABCDEF" };

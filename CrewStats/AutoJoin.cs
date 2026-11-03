@@ -16,16 +16,21 @@ namespace CrewStats;
 /// Automatisch nur einmal pro Lobby (wer sie verlässt, bleibt draußen); F5 tritt sofort bei, F6 schaltet das
 /// automatische Beitreten an/aus. Was die Mod gerade macht, steht unter der Versionsnummer.
 /// Netzwerk läuft im Hintergrund, Spiel-Aufrufe nur im Spiel-Thread (Tick).
+/// Mit der Website-URL (ab 1.9.0) fragt die Mod auch bei ausgeschaltetem Auto-Join alle paar Sekunden nach und schickt
+/// den eigenen Friendcode mit: Wer auf der Stats-Website bei einer Lobby „Beitreten“ drückt, bekommt genau diese Lobby
+/// mit einer pick-id zurück und tritt bei (jede Wahl nur einmal).
 /// </summary>
 internal static class AutoJoin
 {
     private static readonly TimeSpan ReplyTimeout = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan AutoInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan WebsiteInterval = TimeSpan.FromSeconds(6); // eine HTTP-Anfrage, kein Webhook-Umweg
     private static readonly TimeSpan FirstDelay = TimeSpan.FromSeconds(3); // Hauptmenü erst fertig aufbauen lassen
     private static readonly System.Random Jitter = new();
 
     private static readonly object Lock = new();
     private static readonly HashSet<string> JoinedCodes = new();
+    private static readonly HashSet<string> HandledPicks = new();
     private static bool _busy;
     private static LobbyInfo? _pendingJoin; // vom Hintergrund gefunden, im Spiel-Thread beitreten
     private static string _status = "";
@@ -110,7 +115,8 @@ internal static class AutoJoin
         }
 
         var automatic = CrewStatsPlugin.AutoJoinAutomatic.Value;
-        if (manual || (automatic && DateTime.UtcNow >= _nextPoll))
+        var website = AutoJoinRules.IsWebsiteUrl(url);
+        if (manual || ((automatic || website) && DateTime.UtcNow >= _nextPoll))
         {
             bool start;
             lock (Lock)
@@ -120,9 +126,10 @@ internal static class AutoJoin
             }
             if (start)
             {
-                _nextPoll = DateTime.UtcNow + AutoInterval + TimeSpan.FromSeconds(Jitter.NextDouble() * 3);
+                _nextPoll = DateTime.UtcNow + (website ? WebsiteInterval : AutoInterval) + TimeSpan.FromSeconds(Jitter.NextDouble() * 2);
                 if (manual) SetStatus("Auto-Join: frage den Bot …");
-                Task.Run(() => FetchAsync(url, manual));
+                var content = website ? AutoJoinRules.RequestContent(Comfort.OwnFriendCode()) : AutoJoinRules.RequestContent();
+                Task.Run(() => FetchAsync(url, content, manual, automatic));
             }
         }
         else if (!automatic && !manual && CurrentStatus().Length == 0)
@@ -208,20 +215,29 @@ internal static class AutoJoin
         return addresses;
     }
 
-    private static async Task FetchAsync(string url, bool manual)
+    private static async Task FetchAsync(string url, string content, bool manual, bool automatic)
     {
         try
         {
-            var lobby = await BotClient.AskAsync(url, AutoJoinRules.RequestContent(), "CrewStats Auto-Join",
+            var lobby = await BotClient.AskAsync(url, content, "CrewStats Auto-Join",
                 AutoJoinRules.ParseReply, ReplyTimeout);
             if (lobby == null)
             {
-                SetStatus($"Auto-Join: {ConnectionStatus.Current.Message}");
+                if (manual || automatic) SetStatus($"Auto-Join: {ConnectionStatus.Current.Message}");
                 return;
             }
 
+            bool picked;
+            lock (Lock)
+            {
+                picked = AutoJoinRules.IsNewPick(lobby, HandledPicks);
+                if (picked) HandledPicks.Add(lobby.Pick);
+            }
+            if (picked) CrewStatsPlugin.Logger.LogInfo($"Auto-Join: auf der Website gewählt – Lobby {lobby.Code}");
+            else if (!manual && !automatic) return; // Auto-Join aus: nur auf Wahl von der Website reagieren
+
             AutoJoinRules.Decision decision;
-            lock (Lock) decision = AutoJoinRules.Decide(lobby, JoinedCodes, manual);
+            lock (Lock) decision = AutoJoinRules.Decide(lobby, JoinedCodes, manual || picked);
             switch (decision)
             {
                 case AutoJoinRules.Decision.Join:

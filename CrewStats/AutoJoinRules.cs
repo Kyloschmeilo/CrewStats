@@ -5,9 +5,12 @@ using System.Text.Json;
 namespace CrewStats;
 
 /// <summary>Antwort des Bots auf eine Auto-Join-Anfrage (siehe <see cref="AutoJoin"/>).</summary>
-/// <remarks>Region/Server: Server-Region des Hosts (Name + Adresse), leer bei Host-Mods vor 1.7.1 oder altem Bot.</remarks>
+/// <remarks>
+/// Region/Server: Server-Region des Hosts (Name + Adresse), leer bei Host-Mods vor 1.7.1 oder altem Bot.
+/// Pick: gesetzt, wenn der Spieler auf der Stats-Website bei genau dieser Lobby „Beitreten“ gedrückt hat (ab 1.9.0).
+/// </remarks>
 internal sealed record LobbyInfo(string State, string Code, string Map, int Players, int Max, string Host,
-    string Region = "", string Server = "");
+    string Region = "", string Server = "", string Pick = "");
 
 /// <summary>Eine Server-Region, wie sie im Spiel zur Auswahl steht (für <see cref="AutoJoinRules.FindRegion"/>).</summary>
 internal sealed record RegionEntry(string Name, IReadOnlyList<string> Addresses);
@@ -26,6 +29,18 @@ internal static class AutoJoinRules
     /// <summary>Nachrichtentext der Anfrage.</summary>
     public static string RequestContent() => JsonSerializer.Serialize(new { crewstats = Request, v = 1 });
 
+    /// <summary>
+    /// Anfrage an die Stats-Website mit eigenem Friendcode: Hat man dort „Beitreten“ gedrückt, antwortet sie mit genau
+    /// dieser Lobby (+ pick). Über Discord-Webhooks bleibt es bei der Anfrage ohne Friendcode.
+    /// </summary>
+    public static string RequestContent(string? friendCode) => string.IsNullOrWhiteSpace(friendCode)
+        ? RequestContent()
+        : JsonSerializer.Serialize(new { crewstats = Request, v = 1, fc = friendCode.Trim().ToLowerInvariant() });
+
+    /// <summary>Neue Wahl von der Website? (jede pick-id nur einmal – sonst tritt man nach dem Verlassen gleich wieder bei)</summary>
+    public static bool IsNewPick(LobbyInfo lobby, ISet<string> handledPicks) =>
+        lobby.Pick.Length > 0 && !handledPicks.Contains(lobby.Pick);
+
     /// <summary>Liest die (vom Bot bearbeitete) Nachricht; null, solange der Bot noch nicht geantwortet hat.</summary>
     public static LobbyInfo? ParseReply(string? content)
     {
@@ -43,7 +58,8 @@ internal static class AutoJoinRules
                 Int(root, "max"),
                 Str(root, "host") ?? "",
                 (Str(root, "region") ?? "").Trim(),
-                (Str(root, "server") ?? "").Trim());
+                (Str(root, "server") ?? "").Trim(),
+                (Str(root, "pick") ?? "").Trim());
         }
         catch (JsonException)
         {
