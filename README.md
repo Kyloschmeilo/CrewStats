@@ -1,6 +1,6 @@
 # CrewStats – Among-Us-Mod für den Among Us Manager
 
-Eine kleine Mod (BepInEx) für **Among Us auf Steam**, die mit unserem Discord-Bot zusammenarbeitet:
+Eine kleine Mod (BepInEx) für **Among Us auf Steam oder Epic Games**, die mit unserem Discord-Bot zusammenarbeitet:
 
 - 📊 **Rundenstatistik** – nach jeder Runde bekommt der Bot automatisch Sieger, Kills, Meetings und
   Votes (XP, `/stats`, Wetten werden ausgewertet). Aufgezeichnet wird nur, wenn du **Host** bist.
@@ -42,7 +42,9 @@ kann jeder im Discord nutzen.
 
 1. Unter [**Releases**](../../releases/latest) die Datei **`CrewStats-Installer.bat`** herunterladen.
 2. Doppelklicken. Windows warnt evtl. vor einer unbekannten Datei → **Weitere Informationen → Trotzdem ausführen**.
-3. Enter drücken – der Installer findet Among Us, installiert BepInEx (64-Bit) und die Mod.
+3. Enter drücken – der Installer findet Among Us (Steam oder Epic Games), installiert BepInEx (64-Bit) und die Mod.
+   Findet er es nicht, Ordner einfügen oder mit Enter im Auswahlfenster wählen. Liegt Among Us unter
+   „Programme“ (bei Epic üblich), fragt Windows nach Administratorrechten.
 4. Die **Webhook-URL** brauchst du nur, wenn du hostest – du bekommst sie vom Server-Admin.
    Sie ist geheim, bitte nicht weitergeben.
 5. Optional die **Auto-Join-URL** (Discord: `/autojoin`) – dann trittst du der neuesten Lobby automatisch bei.
@@ -57,7 +59,8 @@ Installer nochmal starten → **[2] Deinstallieren**. Danach startet Among Us wi
 
 ## Hinweise
 
-- Nur die **Steam**-Version von Among Us wird unterstützt (ab Version 2026.9.29, 64-Bit).
+- Unterstützt: Among Us auf **Steam** und **Epic Games** (ab Version 2026.9.29, 64-Bit). Die Epic-Version ist
+  noch nicht im echten Spiel getestet.
 - Auto-Update abschalten: in `Among Us\BepInEx\config\de.amongusmanager.crewstats.cfg`
   `AutoUpdate = false` setzen.
 - Probleme? `Among Us\BepInEx\LogOutput.log` an den Server-Admin schicken.
