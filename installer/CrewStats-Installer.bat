@@ -24,6 +24,7 @@ $BepInExUrl    = 'https://builds.bepinex.dev/projects/bepinex_be/735/BepInEx-Uni
 $BepInExSha256 = 'BADEF8112853A00939A0DF6CA143BC0A4E3DC02BD4D21B873302731BFA0E4DF4'
 $ConfigName    = 'de.amongusmanager.crewstats.cfg'
 $WebhookPattern = '^https://(ptb\.|canary\.)?discord(app)?\.com/api/webhooks/\d+/[\w-]+$'
+$WebsitePattern = '^https?://[^/\s]+/api/mod/[\w-]{8,}$'   # Stats-Website (ab CrewStats 1.8.0, nur Auto-Join)
 
 function Step($text) { Write-Host "`n> $text" -ForegroundColor Cyan }
 function Ok($text)   { Write-Host "  OK  $text" -ForegroundColor Green }
@@ -138,7 +139,7 @@ function Install-Mod([string]$game) {
     Ok "CrewStats $version installiert."
 }
 
-function Set-ConfigUrl([string]$game, [string]$section, [string]$key, [string]$label, [string[]]$intro, [string]$skipWarning) {
+function Set-ConfigUrl([string]$game, [string]$section, [string]$key, [string]$label, [string[]]$intro, [string]$skipWarning, [bool]$website = $false) {
     $configDir = Join-Path $game 'BepInEx\config'
     $config = Join-Path $configDir $ConfigName
     $keyPattern = "(?m)^[ \t]*$key[ \t]*=[^\r\n]*"
@@ -152,8 +153,11 @@ function Set-ConfigUrl([string]$game, [string]$section, [string]$key, [string]$l
     while ($true) {
         $url = (Read-Host "      $label").Trim()
         if (-not $url) { if ($current) { Ok "$label behalten." } else { Warn $skipWarning }; return }
+        $url = $url.TrimEnd('/')
         if ($url -match $WebhookPattern) { break }
-        Warn 'Das ist keine Discord-Webhook-URL (https://discord.com/api/webhooks/...).'
+        if ($website -and $url -match $WebsitePattern) { break }
+        if ($website) { Warn 'Das ist keine Auto-Join-URL - kopiere sie genau so, wie /autojoin sie anzeigt.' }
+        else { Warn 'Das ist keine Discord-Webhook-URL (https://discord.com/api/webhooks/...).' }
     }
     New-Item -ItemType Directory -Force $configDir | Out-Null
     if (Test-Path $config) {
@@ -178,7 +182,7 @@ function Set-AutoJoin([string]$game) {
     Set-ConfigUrl $game 'AutoJoin' 'Url' 'Auto-Join-URL' @(
         'Mit Auto-Join tritt Among Us im Hauptmenü automatisch der neuesten Lobby aus dem Discord bei.',
         'Die URL zeigt dir der Bot im Discord mit /autojoin.'
-    ) 'Ohne Auto-Join-URL gibt es kein automatisches Beitreten.'
+    ) 'Ohne Auto-Join-URL gibt es kein automatisches Beitreten.' $true
 }
 
 function Uninstall([string]$game) {

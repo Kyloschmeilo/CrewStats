@@ -92,8 +92,8 @@ public partial class CrewStatsPlugin : BasePlugin
             "AutoJoin",
             "Url",
             "",
-            "Auto-Join-URL, die der Bot bei /autojoin anzeigt (nicht die geheime WebhookUrl). " +
-            "Leer = kein Auto-Join.");
+            "Auto-Join-URL, die der Bot bei /autojoin anzeigt (nicht die geheime WebhookUrl) – eine Adresse der " +
+            "Stats-Website (…/api/mod/…) oder ein Discord-Webhook. Leer = kein Auto-Join.");
         AutoJoinAutomatic = Config.Bind(
             "AutoJoin",
             "Automatisch",
