@@ -28,6 +28,7 @@ public partial class CrewStatsPlugin : BasePlugin
     internal static ConfigEntry<bool> RoleWishesEnabled { get; private set; } = null!;
     internal static ConfigEntry<bool> ShuffleRoles { get; private set; } = null!;
     internal static ConfigEntry<string> AutoJoinUrl { get; private set; } = null!;
+    internal static ConfigEntry<bool> VoiceEnabled { get; private set; } = null!;
     internal static ConfigEntry<bool> AutoJoinAutomatic { get; private set; } = null!;
     internal static ConfigEntry<UnityEngine.KeyCode> AutoJoinKey { get; private set; } = null!;
     internal static ConfigEntry<UnityEngine.KeyCode> AutoJoinToggleKey { get; private set; } = null!;
@@ -94,6 +95,13 @@ public partial class CrewStatsPlugin : BasePlugin
             "",
             "Auto-Join-URL, die der Bot bei /autojoin anzeigt (nicht die geheime WebhookUrl) – eine Adresse der " +
             "Stats-Website (…/api/mod/…) oder ein Discord-Webhook. Leer = kein Auto-Join.");
+        VoiceEnabled = Config.Bind(
+            "Voice",
+            "Enabled",
+            true,
+            "Proximity-Voice im Browser (Live-Tab der Stats-Website): als Host Positionen, Tote, Vents und Meetings an die " +
+            "Website schicken, damit sich dort alle je nach Entfernung hören. Braucht eine Website-URL in [AutoJoin] Url. " +
+            "Die Positionen bekommt kein anderer Spieler, nur die Website.");
         AutoJoinAutomatic = Config.Bind(
             "AutoJoin",
             "Automatisch",
