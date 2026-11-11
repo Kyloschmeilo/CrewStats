@@ -267,6 +267,7 @@ internal static class HudUpdatePatch
     {
         AutoMute.Tick(); // alle fangen eigene Fehler ab
         LobbyReporter.Tick();
+        VoiceReporter.Tick();
         Safe.Run(GameRecorder.Tick);
     }
 }

@@ -10,6 +10,10 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam oder Epic Games**, die mit u
 - 🎮 **Lobby-Ankündigung** – als Host erscheint deine Lobby automatisch im Discord (Code, Map,
   Spielerzahl live), während der Runde ist das Wettbüro gesperrt. Abschalten: `Announce = false`
   im Abschnitt `[Lobby]` der Config.
+- 🎧 **Proximity-Voice im Browser** (nur als Host, ab 1.10.0) – die Mod meldet der Stats-Website, wo alle stehen, wer tot
+  ist, wer im Vent sitzt und ob ein Meeting läuft. Im Live-Tab der Website können dann alle aus der Lobby miteinander
+  reden: nah = laut, weit weg = leise, im Meeting hören sich alle Lebenden, Geister hören alles. Die Positionen bekommt
+  kein anderer Spieler. Braucht die Website-URL in `[AutoJoin] Url`; abschalten: `Enabled = false` unter `[Voice]`.
 - 🚫 **Kein Skip bei Notfall** (Hausregel, nur als Host) – bei Meetings über den Notfall-Knopf
   wird „Überspringen“ abgelehnt, man muss jemanden wählen. An/aus unter **ESC → Allgemein**.
 - 🎭 **Rollenwünsche** (nur als Host) – im Discord kann sich jeder mit `/rollenwunsch` für 20 XP
