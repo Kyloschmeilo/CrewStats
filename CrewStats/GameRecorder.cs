@@ -453,11 +453,18 @@ internal static partial class GameRecorder
         _ => $"Map {mapId}",
     };
 
-    /// <summary>Englische Farbnamen des Spiels (ColorId 0–17), unabhängig von der Spielsprache.</summary>
+    /// <summary>
+    /// Englische Farbnamen (ColorId 0–17 = Spiel, unabhängig von der Spielsprache; 18–41 = Zusatzfarben von
+    /// The Other Roles GMIA in deren Reihenfolge aus <c>CustomColors.Load</c> – nötig ab 19 Spielern, weil das Spiel
+    /// nur 18 Farben hat).
+    /// </summary>
     private static readonly string[] ColorNames =
     {
         "Red", "Blue", "Green", "Pink", "Orange", "Yellow", "Black", "White", "Purple",
         "Brown", "Cyan", "Lime", "Maroon", "Rose", "Banana", "Gray", "Tan", "Coral",
+        "Salmon", "Bordeaux", "Olive", "Turquoise", "Mint", "Lavender", "Nougat", "Peach", "Wasabi", "Hot Pink",
+        "Petrol", "Lemon", "Signal Orange", "Teal", "Blurple", "Sunrise", "Ice", "Fuchsia", "Royal Green", "Slime",
+        "Navy", "Darkness", "Ocean", "Sundown",
     };
 
     internal static string ColorName(int colorId) =>
