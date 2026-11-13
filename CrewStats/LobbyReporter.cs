@@ -21,7 +21,7 @@ internal static class LobbyReporter
 
     internal sealed record RosterEntry(string Name, string Fc, int Color);
 
-    private const int MaxRoster = 20;
+    private const int MaxRoster = PlayerInfoRules.MaxPlayers; // TOR: bis zu 24 Spieler
 
     private const double MinSecondsBetweenUpdates = 5;
     private static readonly LatestWebhookSender Sender = new("Lobby");

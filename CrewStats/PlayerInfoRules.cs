@@ -26,7 +26,8 @@ internal static class PlayerInfoRules
     public const string StatsReplyKind = "stats-reply";
     public const string LinkRequest = "link";
     public const string LinkReplyKind = "link-reply";
-    public const int MaxPlayers = 15;
+    /// <summary>Größte Lobby: The Other Roles erlaubt auf eigenen Servern (Modded NA) bis zu 24 Spieler.</summary>
+    public const int MaxPlayers = 24;
 
     public static string StatsRequestContent(string? me, IEnumerable<string> players) =>
         JsonSerializer.Serialize(new

@@ -14,6 +14,10 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam oder Epic Games**, die mit u
   ist, wer im Vent sitzt und ob ein Meeting läuft. Im Live-Tab der Website können dann alle aus der Lobby miteinander
   reden: nah = laut, weit weg = leise, im Meeting hören sich alle Lebenden, Geister hören alles. Die Positionen bekommt
   kein anderer Spieler. Braucht die Website-URL in `[AutoJoin] Url`; abschalten: `Enabled = false` unter `[Voice]`.
+- 👥 **Bis zu 24 Spieler** (ab 1.11.0) – mit The Other Roles auf Modded NA gehen Lobbys mit mehr als 15 Spielern
+  (beim Erstellen 16–24 wählen oder als Host `/size 24` in den Lobby-Chat). CrewStats zeichnet alle auf, die Website
+  zeigt alle in der Lobby-Liste, Proximity-Voice geht bis 24. Ohne The Other Roles bleibt es beim Limit von 15
+  (die offiziellen Server lassen nicht mehr zu).
 - 🚫 **Kein Skip bei Notfall** (Hausregel, nur als Host) – bei Meetings über den Notfall-Knopf
   wird „Überspringen“ abgelehnt, man muss jemanden wählen. An/aus unter **ESC → Allgemein**.
 - 🎭 **Rollenwünsche** (nur als Host) – im Discord kann sich jeder mit `/rollenwunsch` für 20 XP

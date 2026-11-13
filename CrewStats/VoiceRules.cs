@@ -17,7 +17,7 @@ internal static class VoiceRules
     public static readonly TimeSpan ActiveInterval = TimeSpan.FromMilliseconds(200);
     public static readonly TimeSpan IdleInterval = TimeSpan.FromSeconds(2);
 
-    public const int MaxPlayers = 20;
+    public const int MaxPlayers = PlayerInfoRules.MaxPlayers; // TOR: bis zu 24 Spieler
 
     public static TimeSpan Interval(int listeners) => listeners > 0 ? ActiveInterval : IdleInterval;
 
