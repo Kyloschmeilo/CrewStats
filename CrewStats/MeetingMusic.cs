@@ -208,6 +208,7 @@ internal static class MeetingMusic
     /// </summary>
     internal const string Script = """
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 try {
     Add-Type -AssemblyName System.Runtime.WindowsRuntime
@@ -230,6 +231,7 @@ $paused = New-Object System.Collections.ArrayList
 while ($true) {
     $line = [Console]::In.ReadLine()
     if ($null -eq $line) { break }
+    $line = $line.TrimStart([char]0xFEFF).Trim() # manche Schreiber setzen ein BOM vor die erste Zeile
     try {
         if ($line -eq 'pause') {
             $paused.Clear()
