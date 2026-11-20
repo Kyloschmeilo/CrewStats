@@ -38,6 +38,7 @@ public partial class CrewStatsPlugin : BasePlugin
     internal static ConfigEntry<bool> ShowStatus { get; private set; } = null!;
     internal static ConfigEntry<bool> ShowUpdateNotice { get; private set; } = null!;
     internal static ConfigEntry<bool> RetryUploads { get; private set; } = null!;
+    internal static ConfigEntry<bool> PauseMusicInMeeting { get; private set; } = null!;
     internal static ConfigEntry<UnityEngine.KeyCode> SettingsKey { get; private set; } = null!;
     internal static string DataDirectory { get; private set; } = null!;
 
@@ -158,6 +159,13 @@ public partial class CrewStatsPlugin : BasePlugin
             true,
             "Runden, die nicht gesendet werden konnten (z.B. ohne Internet), liegen in BepInEx/CrewStats/pending " +
             "und werden alle 2 Minuten erneut gesendet. false = nur beim Spielstart und nach der nächsten Runde.");
+        PauseMusicInMeeting = Config.Bind(
+            "Musik",
+            "ImMeetingPausieren",
+            false,
+            "Musik auf deinem PC (Spotify, YouTube im Browser … alles aus der Windows-Medienanzeige) beim Meeting " +
+            "automatisch anhalten und nach dem Meeting weiterspielen. Was vorher schon pausiert war, bleibt pausiert. " +
+            "Nur Windows, braucht keinen Host. Schalter im Spiel: F7.");
         SettingsKey = Config.Bind(
             "Komfort",
             "TasteMenue",

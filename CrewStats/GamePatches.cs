@@ -88,6 +88,7 @@ internal static class GameEndPatch
     public static void Prefix(EndGameResult endGameResult)
     {
         Safe.Run(AutoMute.Stop);
+        Safe.Run(MeetingMusic.Stop);
         Safe.Run(RoleWishes.Reset);
         Safe.Run(RoleShuffle.Reset);
         _rawReason = (int)endGameResult.GameOverReason;
@@ -111,6 +112,7 @@ internal static class ExitGamePatch
     public static void Prefix()
     {
         Safe.Run(AutoMute.Stop);
+        Safe.Run(MeetingMusic.Stop);
         Safe.Run(LobbyReporter.Close);
         Safe.Run(RoleWishes.Reset);
         Safe.Run(RoleShuffle.Reset);
@@ -266,6 +268,7 @@ internal static class HudUpdatePatch
     public static void Postfix()
     {
         AutoMute.Tick(); // alle fangen eigene Fehler ab
+        MeetingMusic.Tick();
         LobbyReporter.Tick();
         VoiceReporter.Tick();
         Safe.Run(GameRecorder.Tick);
