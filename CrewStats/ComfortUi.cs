@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using BepInEx.Configuration;
 using UnityEngine;
 
@@ -264,6 +265,7 @@ public class ComfortUi : MonoBehaviour
         ("ANZEIGE", "Lobby-Info: wer ist verknüpft", () => CrewStatsPlugin.ShowLobbyInfo),
         ("ANZEIGE", "Rundenzusammenfassung", () => CrewStatsPlugin.ShowRoundSummary),
         ("ANZEIGE", "Verbindungsstatus unten links", () => CrewStatsPlugin.ShowStatus),
+        ("MUSIK", "Musik im Meeting anhalten (danach weiter)", () => CrewStatsPlugin.PauseMusicInMeeting),
         ("UPDATES & SENDEN", "Update-Hinweis", () => CrewStatsPlugin.ShowUpdateNotice),
         ("UPDATES & SENDEN", "Auto-Update installieren", () => CrewStatsPlugin.AutoUpdate),
         ("UPDATES & SENDEN", "Ungesendete Runden automatisch nachsenden", () => CrewStatsPlugin.RetryUploads),
@@ -279,7 +281,7 @@ public class ComfortUi : MonoBehaviour
     {
         var w = 520 * S;
         var rowH = 26 * S;
-        var h = (70 + Toggles.Length * 26 + 3 * 24 + 150) * S;
+        var h = (70 + Toggles.Length * 26 + (Toggles.Select(t => t.Section).Distinct().Count() + 1) * 24 + 150) * S;
         var rect = R((Screen.width - w) / 2, Mathf.Max(10 * S, (Screen.height - h) / 2), w, h);
         Panel(rect);
         GUI.Label(R(rect.x + 14 * S, rect.y + 10 * S, w - 60 * S, 24 * S), $"CREWSTATS {CrewStatsPlugin.Version} · EINSTELLUNGEN", _title!);
