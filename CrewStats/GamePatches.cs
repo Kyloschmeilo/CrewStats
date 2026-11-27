@@ -9,7 +9,8 @@ namespace CrewStats;
 
 // Alle Patches lesen nur mit (Postfix/Prefix ohne Rückgabewert) und verändern das Spiel nicht –
 // Ausnahmen: die zusätzlichen Schalter im Einstellungsmenü, die optionale Hausregel
-// „Kein Skip bei Notfall“ (CastVote-Prefix, nur als Host und nur wenn eingeschaltet) und die
+// „Kein Skip bei Notfall“ (CastVote-Prefix, nur als Host und nur wenn eingeschaltet), der optionale Jester-Modus
+// (nur als Host, ohne The Other Roles: Jester rausgewählt → er gewinnt, siehe Jester.cs) und die
 // Rollenvergabe (nur als Host: eigene Würfel per HashRandom-Postfix während SelectRoles; Rollenwünsche aus Discord
 // per RpcSetRole-Prefix, nur wenn es Wünsche gibt). Mit The Other Roles liest die Mod zusätzlich (per Reflection,
 // siehe TorBridge) Rollen, Gewinner, Tode und wer im Meeting stumm ist.
@@ -21,6 +22,7 @@ internal static class IntroCutscenePatch
     public static void Prefix()
     {
         Safe.Run(GameRecorder.OnGameStart);
+        Safe.Run(Jester.OnGameStart);
         Safe.Run(SettingsReporter.OnGameStart);
         Safe.Run(RoundSummary.OnGameStart);
     }
@@ -116,6 +118,7 @@ internal static class ExitGamePatch
         Safe.Run(LobbyReporter.Close);
         Safe.Run(RoleWishes.Reset);
         Safe.Run(RoleShuffle.Reset);
+        Safe.Run(Jester.Reset);
         Safe.Run(GameRecorder.OnExitGame); // nur für den Freeplay-Test (Config: Debug.RecordFreeplay)
     }
 }
@@ -125,7 +128,11 @@ internal static class ExitGamePatch
 [HarmonyPatch(typeof(GameStartManager), nameof(GameStartManager.BeginGame))]
 internal static class BeginGamePatch
 {
-    public static void Postfix() => Safe.Run(RoleWishes.OnStartPressed);
+    public static void Postfix()
+    {
+        Safe.Run(RoleWishes.OnStartPressed);
+        Safe.Run(Jester.OnStartPressed);
+    }
 }
 
 [HarmonyPatch(typeof(RoleManager), nameof(RoleManager.SelectRoles))]
@@ -227,6 +234,37 @@ internal static class RpcSetRolePatch
     }
 }
 
+// ---------- Jester-Modus (nur als Host, normales Among Us, Config [Jester] Enabled) ----------
+
+[HarmonyPatch(typeof(PlayerControl), nameof(PlayerControl.Exiled))]
+internal static class ExiledPatch
+{
+    public static void Postfix(PlayerControl __instance) => Safe.Run(() => Jester.OnExiled(__instance));
+}
+
+/// <summary>Solange der Jester-Sieg läuft, kein anderes Spielende. Bei einem Fehler prüft das Spiel normal.</summary>
+[HarmonyPatch(typeof(LogicGameFlowNormal), nameof(LogicGameFlowNormal.CheckEndCriteria))]
+internal static class CheckEndCriteriaPatch
+{
+    public static bool Prefix()
+    {
+        try
+        {
+            return !Jester.WinPending;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+}
+
+[HarmonyPatch(typeof(EndGameManager), nameof(EndGameManager.SetEverythingUp))]
+internal static class EndScreenPatch
+{
+    public static void Postfix(EndGameManager __instance) => Safe.Run(() => Jester.ShowEndScreen(__instance));
+}
+
 // ---------- ausführliche Rundendaten (nur lesen, nur beim aufzeichnenden Host) ----------
 
 [HarmonyPatch(typeof(ShipStatus), nameof(ShipStatus.UpdateSystem), typeof(SystemTypes), typeof(PlayerControl), typeof(byte))]
@@ -272,6 +310,7 @@ internal static class HudUpdatePatch
         LobbyReporter.Tick();
         VoiceReporter.Tick();
         Safe.Run(GameRecorder.Tick);
+        Safe.Run(Jester.Tick);
     }
 }
 

@@ -28,6 +28,11 @@ Eine kleine Mod (BepInEx) für **Among Us auf Steam oder Epic Games**, die mit u
 - 🎭 **The Other Roles** – spielt ihr mit der Rollen-Mod The Other Roles (GMIA), schickt die Mod auch die
   TOR-Rollen, die echten Gewinner (Jester, Jackal, Liebespaar …) und Guesser-/Jailor-/Sheriff-Abschüsse an den Bot.
   Beim Auto-Mute bleiben Erpresste (Blackmailer) und Eingesperrte (Jailor) im Meeting auch im Discord stumm.
+- 🤡 **Jester-Modus** (nur als Host, normales Among Us ohne The Other Roles, Standard aus) – nur der Host braucht die
+  Mod. Ein zufälliger Crewmate, der mit Discord verknüpft ist, wird heimlich Jester und bekommt vom Bot eine DM.
+  Wird er rausgewählt, endet das Spiel und nur er gewinnt (auch im Spiel der anderen ohne Mod). Auch der Host sieht
+  nicht, wer Jester ist. Einschalten mit **F7** → „Jester-Modus“ oder `[Jester] Enabled = true`, `Chance` = wie oft
+  es einen gibt (Prozent). Braucht den neuen Bot.
 - 🚪 **Auto-Join** – im Hauptmenü tritt Among Us automatisch der neuesten Lobby bei, die der Bot im Discord
   ankündigt (jede Lobby nur einmal; **F5** = sofort beitreten, **F6** = automatisch an/aus, Status unter der
   Versionsnummer). Dafür die Auto-Join-URL aus `/autojoin` im Installer eintragen – sie ist nicht die geheime

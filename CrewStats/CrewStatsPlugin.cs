@@ -27,6 +27,8 @@ public partial class CrewStatsPlugin : BasePlugin
     internal static ConfigEntry<bool> NoSkipOnEmergency { get; private set; } = null!;
     internal static ConfigEntry<bool> RoleWishesEnabled { get; private set; } = null!;
     internal static ConfigEntry<bool> ShuffleRoles { get; private set; } = null!;
+    internal static ConfigEntry<bool> JesterEnabled { get; private set; } = null!;
+    internal static ConfigEntry<int> JesterChance { get; private set; } = null!;
     internal static ConfigEntry<string> AutoJoinUrl { get; private set; } = null!;
     internal static ConfigEntry<bool> VoiceEnabled { get; private set; } = null!;
     internal static ConfigEntry<bool> AutoJoinAutomatic { get; private set; } = null!;
@@ -84,6 +86,18 @@ public partial class CrewStatsPlugin : BasePlugin
             "Als Host würfelt die Mod selbst (echter Zufall), wer welche Rolle bekommt – jeder hat dieselbe Chance. " +
             "Welche Rollen es gibt und wie viele Impostor, bestimmen weiter die Lobby-Einstellungen. " +
             "false = das Spiel verteilt die Rollen wie ohne Mod.");
+        JesterEnabled = Config.Bind(
+            "Jester",
+            "Enabled",
+            false,
+            "Jester-Modus für normales Among Us (nur der Host braucht die Mod): ein zufälliger Crewmate, der mit Discord " +
+            "verknüpft ist, wird heimlich Jester und bekommt vom Bot eine DM. Wird er rausgewählt, endet das Spiel und nur er " +
+            "gewinnt. Auch der Host sieht nicht, wer es ist. Mit The Other Roles aus (TOR hat einen eigenen Jester).");
+        JesterChance = Config.Bind(
+            "Jester",
+            "Chance",
+            100,
+            new ConfigDescription("Wie wahrscheinlich es in einer Runde einen Jester gibt (Prozent).", new AcceptableValueRange<int>(0, 100)));
         AnnounceLobby = Config.Bind(
             "Lobby",
             "Announce",
