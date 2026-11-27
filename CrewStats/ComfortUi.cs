@@ -275,6 +275,7 @@ public class ComfortUi : MonoBehaviour
         ("ALS HOST", "Rollenwünsche erfüllen", () => CrewStatsPlugin.RoleWishesEnabled),
         ("ALS HOST", "Rollen selbst würfeln (echter Zufall)", () => CrewStatsPlugin.ShuffleRoles),
         ("ALS HOST", "Hausregel: kein Skip bei Notfall", () => CrewStatsPlugin.NoSkipOnEmergency),
+        ("ALS HOST", "Jester-Modus (normales Among Us, DM per Discord)", () => CrewStatsPlugin.JesterEnabled),
     };
 
     private static void Settings()

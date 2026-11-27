@@ -511,10 +511,10 @@ internal static class RoleWishes
     // ---------- intern ----------
 
     /// <summary>Webhook-URL ohne Anhängsel (…/api/webhooks/&lt;id&gt;/&lt;token&gt;).</summary>
-    private static string BaseUrl(string url) => url.Split('?', '#')[0].TrimEnd('/');
+    internal static string BaseUrl(string url) => url.Split('?', '#')[0].TrimEnd('/');
 
     /// <summary>Webhook-Nachricht: kein Ping, keine Benachrichtigung im Channel.</summary>
-    private static StringContent Body(string content) =>
+    internal static StringContent Body(string content) =>
         new(JsonSerializer.Serialize(new
         {
             username = "CrewStats",
@@ -523,7 +523,7 @@ internal static class RoleWishes
             allowed_mentions = new { parse = Array.Empty<string>() },
         }), Encoding.UTF8, "application/json");
 
-    private static TimeSpan RetryAfter(HttpResponseMessage response)
+    internal static TimeSpan RetryAfter(HttpResponseMessage response)
     {
         var seconds = response.Headers.RetryAfter?.Delta?.TotalSeconds ?? 1;
         return TimeSpan.FromSeconds(Math.Clamp(seconds, 0.2, 5));
@@ -540,6 +540,6 @@ internal static class RoleWishes
         return options != null && options.GameMode is GameModes.Normal or GameModes.NormalFools;
     }
 
-    private static bool IsNormalOnlineHost() =>
+    internal static bool IsNormalOnlineHost() =>
         IsNormalHost() && AmongUsClient.Instance.NetworkMode == NetworkModes.OnlineGame;
 }

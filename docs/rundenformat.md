@@ -33,7 +33,7 @@ Ein vollständiges Beispiel steht in [`beispiel-runde.json`](beispiel-runde.json
 | `map` / `mapId` | string / int | Map-Name / Id (0 Skeld, 1 MIRA HQ, 2 Polus, 3 dlekS, 4 Airship, 5 Fungle) |
 | `startedAt` / `endedAt` | datetime | Start/Ende (UTC) |
 | `durationSeconds` | number | Länge in Sekunden (ganze) |
-| `endReason` | string | Grund des Spielendes (`GameOverReason`, mit TOR auch `JesterWin` …) |
+| `endReason` | string | Grund des Spielendes (`GameOverReason`, mit TOR oder dem Jester-Modus auch `JesterWin` …) |
 | `winningTeam` | string | `CREW`, `IMPOSTOR`, `NEUTRAL` (TOR-Sondersieg) oder `UNKNOWN` |
 | `mod` | string? | z.B. `TheOtherRoles GMIA 1.4.1` |
 | `modGameMode` | string? | TOR-Spielmodus (`Classic`, `Guesser` …) |

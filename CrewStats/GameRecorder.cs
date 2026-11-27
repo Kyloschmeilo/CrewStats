@@ -269,6 +269,7 @@ internal static partial class GameRecorder
         round.WinningTeam = RoundRules.TeamForReason(round.EndReason);
         foreach (var player in round.Players)
             player.Won = player.Team == round.WinningTeam;
+        Optional("Jester", () => Jester.ApplyToRound(round));
         Send(round);
     }
 
